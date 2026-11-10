@@ -318,6 +318,9 @@ a.btn{text-decoration:none}
 .drum{font-size:96px;line-height:1;display:inline-block;animation:drum .12s linear infinite}
 .rv-t{font-size:34px;margin-top:20px;animation:pulse .5s ease-in-out infinite alternate}
 #overlay.light{background:var(--bg);color:var(--ink)}
+/* 결과 발표의 드럼롤: 뒤에 이미 그려진 결과가 비치지 않도록 완전히 불투명하게, 서서히가 아니라 즉시 덮는다 */
+#overlay.solid{background:#2B1A10}
+#overlay.instant{transition:none}
 .iv{width:100%;max-width:380px;text-align:center}
 .iv-ic{width:72px;height:72px;margin:0 auto 14px;border-radius:50%;background:var(--sage-l);color:#4F5C36;display:grid;place-items:center;animation:pop .45s cubic-bezier(.2,1.4,.4,1)}
 .iv h2{font-size:30px;margin:0 0 8px}
@@ -698,13 +701,15 @@ function playReveal(q) {
   clearTimeout(ovTimer);
   ov.classList.remove('light');
   ov.innerHTML = `<div class="rv"><div class="rv-q">${esc(q.text)}</div><div class="drum">${emo('🥁')}</div><div class="rv-t display">두구두구두구…</div></div>`;
+  // 결과 화면은 이미 뒤에 그려져 있다. 같은 프레임에 불투명한 덮개를 올려서 미리 보이지 않게 한다
+  ov.classList.add('solid', 'instant', 'show');
   ov.hidden = false;
-  requestAnimationFrame(() => ov.classList.add('show'));
   playDrumroll(2.6);
   vibrate([25, 45, 25, 45, 25, 45, 25, 45, 25]);
-  setTimeout(() => {
+  ovTimer = setTimeout(() => {
+    ov.classList.remove('instant'); void ov.offsetWidth; // 걷힐 때는 부드럽게
     ov.classList.remove('show');
-    setTimeout(() => { ov.hidden = true; ov.innerHTML = ''; }, 260);
+    ovTimer = setTimeout(() => { ov.hidden = true; ov.innerHTML = ''; ov.classList.remove('solid'); }, 260);
     confetti(); playTada(); vibrate(150);
   }, 2700);
 }
@@ -720,10 +725,11 @@ function playInterlude(prev, next) {
     <h2 class="display">${all ? '모두 투표 완료!' : '투표 종료!'}</h2>
     <p>결과는 모든 질문이 끝난 뒤<br>한꺼번에 공개돼요</p>
     <div class="iv-next">${box}<div class="iv-bar"><i></i></div></div></div>`;
+  clearTimeout(ovTimer);
+  ov.classList.remove('solid', 'instant', 'show');
   ov.classList.add('light');
   ov.hidden = false;
   requestAnimationFrame(() => ov.classList.add('show'));
-  clearTimeout(ovTimer);
   ovTimer = setTimeout(() => {
     ov.classList.remove('show');
     ovTimer = setTimeout(() => { ov.hidden = true; ov.innerHTML = ''; ov.classList.remove('light'); }, 260);
