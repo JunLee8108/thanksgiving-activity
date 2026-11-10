@@ -66,6 +66,15 @@ label.f{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:16
 .emoji-grid button{display:grid;place-items:center;aspect-ratio:1;border-radius:10px;font-size:22px;background:var(--bg);border:1.5px solid transparent;transition:transform .1s}
 .emoji-grid button.on{border-color:var(--pumpkin);background:var(--pumpkin-l);transform:scale(1.06)}
 .form-submit{margin-top:22px}
+.gender{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.gender button{height:46px;border-radius:12px;border:1.5px solid var(--line);background:#fff;font-weight:700;font-size:15px;color:var(--ink2);transition:border-color .15s,background .15s}
+.gender button.on{border-color:var(--pumpkin);background:var(--pumpkin-l);color:var(--ink)}
+/* 질문의 후보 범위 (전체 / 남자만 / 여자만) */
+.target-pick{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;font-weight:700;color:var(--ink2)}
+.target-pick button{height:36px;padding:0 12px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);font-size:13px;font-weight:700;color:var(--ink2)}
+.target-pick button.on{border-color:var(--pumpkin-d);background:var(--pumpkin-l);color:var(--pumpkin-d)}
+.tag-t{display:inline-flex;align-items:center;height:20px;padding:0 7px;margin-left:6px;border-radius:999px;background:var(--pumpkin-l);color:var(--pumpkin-d);font-size:11px;font-weight:800;font-style:normal;vertical-align:middle;white-space:nowrap}
+.q-meta .tag-t{margin-left:0}
 
 /* Home */
 .hero{text-align:center;padding:28px 0 22px}
@@ -209,7 +218,7 @@ label.f{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:16
 .q-secret li:last-child{border-bottom:0}
 .q-secret b{flex-shrink:0;width:28px;font-weight:800;color:var(--pumpkin-d)}
 .q-secret span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.q-secret i{flex-shrink:0;width:22px;height:22px;border-radius:50%;background:var(--bg2);color:var(--ink2);display:grid;place-items:center;font-size:12px;font-weight:800;font-style:normal}
+.q-secret i.q{flex-shrink:0;width:22px;height:22px;border-radius:50%;background:var(--bg2);color:var(--ink2);display:grid;place-items:center;font-size:12px;font-weight:800;font-style:normal}
 
 /* Host panel sheet */
 .sheet.panel .seg{margin:10px 0 6px;flex-shrink:0}
@@ -369,6 +378,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 const LS_SESSION = 'tg-awards-session';
 const LS_NICK = 'tg-awards-nick';
 const LS_SOUND = 'tg-awards-sound';
+const LS_GENDER = 'tg-awards-gender';
 const LS_CHAT_READ = 'tg-awards-chat-read';
 const CHAT_MAX = 200;
 const EMOJIS = ['🦃','🥧','🌽','🍂','🍁','🍗','🥔','🍠','🎃','🍷','☕','😎','🤠','👻','🐻','🦊'];
@@ -404,16 +414,31 @@ const EMO = {
   '🥁': ['drum', '드럼'],
   '🤷': ['person-shrugging', '어깨 으쓱'],
 };
+// [질문, 후보 범위] — 후보 범위: all(전체) | m(남자만) | f(여자만)
 const SAMPLE_QUESTIONS = [
-  '학창시절 껌 좀 씹어본 사람은?',
-  '오늘 제일 많이 먹을 것 같은 사람은?',
-  '단톡방 답장 제일 늦는 사람은?',
-  '10년 뒤 제일 부자일 것 같은 사람은?',
-  '좀비 사태 때 제일 먼저 당할 사람은?',
-  '노래방 가면 마이크 안 놓는 사람은?',
-  '연애 상담 제일 잘해줄 것 같은 사람은?',
-  '올해 제일 고마웠던 사람은?',
+  ['학창시절 껌 좀 씹어본 것 같은 사람은?', 'all'],
+  ['학창시절 공부 제일 잘했을 것 같은 사람은?', 'all'],
+  ['학창시절 인기 제일 많았을 것 같은 사람은?', 'all'],
+  ['방이 제일 지저분할 것 같은 사람은?', 'all'],
+  ['나이 들어도 제일 철 안 들 것 같은 사람은?', 'all'],
+  ['첫인상과 실제 성격이 제일 다른 사람은?', 'all'],
+  ['좀비 사태가 터지면 제일 먼저 당할 것 같은 사람은?', 'all'],
+  ['무인도에 떨어져도 끝까지 살아남을 것 같은 사람은?', 'all'],
+  ['10년 뒤 제일 부자가 되어 있을 것 같은 사람은?', 'all'],
+  ['아이돌로 데뷔했으면 센터였을 것 같은 사람은?', 'all'],
+  ['유튜버를 하면 제일 잘될 것 같은 사람은?', 'all'],
+  ['드라마에 나오면 악역이 제일 잘 어울릴 것 같은 사람은?', 'all'],
+  ['정치를 하면 대통령까지 갈 것 같은 사람은?', 'all'],
+  ['비밀을 말해주면 제일 빨리 퍼뜨릴 것 같은 사람은?', 'all'],
+  ['조선시대에 태어났으면 왕이었을 것 같은 사람은?', 'all'],
+  ['50년 뒤에도 제일 동안일 것 같은 사람은?', 'all'],
+  ['미래에 최고의 남편이 될 것 같은 사람은?', 'm'],
+  ['미래에 최고의 아내가 될 것 같은 사람은?', 'f'],
+  ['아이가 생기면 제일 극성 부모가 될 것 같은 사람은?', 'all'],
+  ['이 모임의 진짜 실세일 것 같은 사람은?', 'all'],
 ];
+const TARGET_LABEL = { m: '남자만 후보', f: '여자만 후보' };
+const GENDER_LABEL = { m: '남자', f: '여자' };
 const ERRORS = {
   ROOM_NOT_FOUND: '방 코드를 찾을 수 없어요',
   NICKNAME_TAKEN: '이미 사용 중인 닉네임이에요',
@@ -430,6 +455,7 @@ const ERRORS = {
   MESSAGE_TOO_LONG: '메시지는 200자까지 보낼 수 있어요',
   TOO_FAST: '메시지를 너무 빨리 보내고 있어요. 잠시 후 다시 보내주세요',
   NO_QUESTIONS: '시작할 질문이 없어요. 질문을 먼저 추가해주세요',
+  BAD_GENDER: '성별을 골라주세요',
 };
 
 /* ================= State ================= */
@@ -444,6 +470,7 @@ let sheetKind = null;
 let hostTab = 'q';        // 진행 관리 시트의 탭: q(질문) | p(참가자)
 let panelToBottom = false; // 질문을 추가한 뒤 목록을 맨 아래로
 let stageHTML = '';
+let addTarget = 'all';     // 새로 추가할 질문의 후보 범위
 let ovTimer = null;
 let soundOn = lsGet(LS_SOUND) !== 'off';
 // msgs: 서버에 저장된 메시지(id 오름차순), pending: 전송 중인 내 메시지
@@ -481,6 +508,10 @@ const isHost = () => !!S.room && S.room.host_participant_id === session?.partici
 const me = () => S.participants.find((p) => p.id === session?.participant_id);
 const currentQuestion = () => (S.room?.current_question_id ? S.questions.find((q) => q.id === S.room.current_question_id) : null);
 const shareUrl = () => location.origin + location.pathname + '?code=' + (session?.code || '');
+// 질문의 후보: 성별이 정해진 질문은 그 성별 참가자만
+const candidatesFor = (q) => (q.target === 'm' || q.target === 'f' ? S.participants.filter((p) => p.gender === q.target) : S.participants);
+const askable = (q) => candidatesFor(q).length > 0;
+const targetTag = (q) => (TARGET_LABEL[q.target] ? `<i class="tag-t">${TARGET_LABEL[q.target]}</i>` : '');
 const vibrate = (p) => { try { navigator.vibrate && navigator.vibrate(p); } catch {} };
 
 /* ================= Icons ================= */
@@ -633,6 +664,13 @@ function playInterlude(prev, next) {
 }
 
 /* ================= Home ================= */
+function genderPick(group, selected) {
+  return `<div class="gender" role="radiogroup" aria-label="성별" data-group="${group}-g" data-value="${selected}">${Object.entries(GENDER_LABEL).map(([g, t]) =>
+    `<button type="button" role="radio" aria-checked="${g === selected}" class="${g === selected ? 'on' : ''}" data-action="pick-gender" data-g="${g}">${t}</button>`).join('')}</div>
+    <div class="hint">남편·아내처럼 후보가 나뉘는 질문에 쓰여요</div>`;
+}
+const targetPick = () => `<div class="target-pick" role="radiogroup" aria-label="후보 범위"><span>후보</span>${[['all', '전체'], ['m', '남자만'], ['f', '여자만']].map(([t, l]) =>
+  `<button type="button" role="radio" aria-checked="${addTarget === t}" class="${addTarget === t ? 'on' : ''}" data-action="pick-target" data-t="${t}">${l}</button>`).join('')}</div>`;
 function emojiGrid(group, selected) {
   return `<div class="emoji-grid" data-group="${group}" data-value="${selected}">${EMOJIS.map(
     (e) => `<button type="button" class="${e === selected ? 'on' : ''}" data-action="pick-emoji" data-e="${e}" aria-label="${emoName(e)}" aria-pressed="${e === selected}">${emo(e)}</button>`
@@ -642,6 +680,7 @@ function renderHome(prefillCode, startTab) {
   teardownRoom();
   $('#dock').innerHTML = '';
   const nick = esc(lsGet(LS_NICK) || '');
+  const gender = GENDER_LABEL[lsGet(LS_GENDER)] ? lsGet(LS_GENDER) : '';
   const saved = loadSession();
   const backLink = saved && prefillCode && saved.code !== prefillCode.toUpperCase()
     ? `<button class="back-link" data-action="back-to-room">이전 방(${esc(saved.code)})으로 돌아가기</button>` : '';
@@ -663,6 +702,8 @@ function renderHome(prefillCode, startTab) {
         <input id="j-code" maxlength="5" placeholder="예: K7QXP" autocapitalize="characters" spellcheck="false" value="${esc((prefillCode || '').toUpperCase())}" style="text-transform:uppercase;letter-spacing:.12em;font-weight:800">
         <label class="f" for="j-nick">닉네임</label>
         <input id="j-nick" maxlength="12" placeholder="친구들이 알아볼 이름" value="${nick}">
+        <label class="f">성별</label>
+        ${genderPick('j', gender)}
         <label class="f">내 이모지</label>
         ${emojiGrid('j', randomEmoji())}
         <button class="btn block form-submit" type="submit">입장하기</button>
@@ -672,6 +713,8 @@ function renderHome(prefillCode, startTab) {
         <input id="c-name" maxlength="40" value="김김이홍남원 어워즈">
         <label class="f" for="c-nick">내 닉네임</label>
         <input id="c-nick" maxlength="12" placeholder="친구들이 알아볼 이름" value="${nick}">
+        <label class="f">성별</label>
+        ${genderPick('c', gender)}
         <label class="f">내 이모지</label>
         ${emojiGrid('c', '🦃')}
         <label class="f" for="c-pin">호스트 PIN</label>
@@ -692,10 +735,12 @@ async function onJoin(e) {
   const emoji = $('[data-group="j"]').dataset.value;
   if (code.length < 4) return toast('방 코드를 입력해주세요');
   if (!nick) return toast('닉네임을 입력해주세요');
+  const gender = $('[data-group="j-g"]').dataset.value;
+  if (!gender) return toast('성별을 골라주세요');
   const btn = e.submitter || $('#f-join .btn'); btn.disabled = true;
   try {
-    const res = await rpc('join_room', { p_code: code, p_nickname: nick, p_emoji: emoji });
-    lsSet(LS_NICK, nick);
+    const res = await rpc('join_room', { p_code: code, p_nickname: nick, p_emoji: emoji, p_gender: gender });
+    lsSet(LS_NICK, nick); lsSet(LS_GENDER, gender);
     startSession(res);
   } catch (err) { toast(errMsg(err)); btn.disabled = false; }
 }
@@ -708,10 +753,12 @@ async function onCreate(e) {
   if (!name) return toast('방 이름을 입력해주세요');
   if (!nick) return toast('닉네임을 입력해주세요');
   if (pin.length < 4) return toast('PIN은 4자리 이상이어야 해요');
+  const gender = $('[data-group="c-g"]').dataset.value;
+  if (!gender) return toast('성별을 골라주세요');
   const btn = e.submitter || $('#f-create .btn'); btn.disabled = true;
   try {
-    const res = await rpc('create_room', { p_room_name: name, p_pin: pin, p_nickname: nick, p_emoji: emoji });
-    lsSet(LS_NICK, nick);
+    const res = await rpc('create_room', { p_room_name: name, p_pin: pin, p_nickname: nick, p_emoji: emoji, p_gender: gender });
+    lsSet(LS_NICK, nick); lsSet(LS_GENDER, gender);
     startSession(res);
   } catch (err) { toast(errMsg(err)); btn.disabled = false; }
 }
@@ -757,7 +804,7 @@ async function refresh() {
     const rid = session.room_id;
     const [r, p, q] = await Promise.all([
       sb.from('rooms').select('*').eq('id', rid).maybeSingle(),
-      sb.from('participants').select('id,nickname,emoji,created_at').eq('room_id', rid).order('created_at'),
+      sb.from('participants').select('id,nickname,emoji,gender,created_at').eq('room_id', rid).order('created_at'),
       sb.from('questions').select('*').eq('room_id', rid).order('sort_order'),
     ]);
     const err = r.error || p.error || q.error;
@@ -891,7 +938,7 @@ function personChip(p) {
 }
 const missingSamples = () => {
   const have = new Set(S.questions.map((q) => q.text));
-  return SAMPLE_QUESTIONS.filter((t) => !have.has(t));
+  return SAMPLE_QUESTIONS.filter(([t]) => !have.has(t));
 };
 function lobbyHTML() {
   const n = S.participants.length;
@@ -923,6 +970,7 @@ function lobbyHTML() {
           <input id="lobby-q" maxlength="200" placeholder="예: 노래방 마이크 안 놓는 사람은?" enterkeyhint="done" autocomplete="off">
           <button class="btn" type="submit">추가</button>
         </div>
+        ${targetPick()}
       </form>
       ${samples ? `<button class="btn ghost block" data-action="sample-questions">${ICON.plus(18)}예시 질문 ${samples}개 한 번에 넣기</button>` : ''}
     </div>${people}`;
@@ -931,7 +979,7 @@ function lobbyHTML() {
   return `
     <div class="card ready">
       <div class="ready-h"><h2 class="display">질문 ${drafts.length}개</h2><span class="pill open">${ICON.check(14, 3)}준비 완료</span></div>
-      <ol class="q-preview">${drafts.slice(0, 3).map((q) => `<li><b>Q${no(q)}</b><span>${esc(q.text)}</span></li>`).join('')}</ol>
+      <ol class="q-preview">${drafts.slice(0, 3).map((q) => `<li><b>Q${no(q)}</b><span>${esc(q.text)}${targetTag(q)}</span></li>`).join('')}</ol>
       ${drafts.length > 3 ? `<div class="more">외 ${drafts.length - 3}개</div>` : ''}
       <div class="row">
         <button class="btn ghost sm" data-action="host-panel" data-focus="1">${ICON.plus(18)}질문 추가</button>
@@ -949,7 +997,7 @@ function questionHTML(q) {
   const n = S.participants.length;
   const pct = n ? Math.min(100, Math.round((q.vote_count / n) * 100)) : 0;
   const head = `
-    <div class="q-head"><span class="q-label">Q${idx} <em>/ ${total}</em></span>${statusPill(q.status)}</div>
+    <div class="q-head"><span class="q-label">Q${idx} <em>/ ${total}</em>${targetTag(q)}</span>${statusPill(q.status)}</div>
     <h2 class="q-text display">${esc(q.text)}</h2>`;
   const progress = `
     <div class="progress">
@@ -959,14 +1007,14 @@ function questionHTML(q) {
 
   if (q.status === 'open') {
     const mine = S.myVotes[q.id];
-    const picks = S.participants.map((p) => `
+    const picks = candidatesFor(q).map((p) => `
       <button class="pick ${mine === p.id ? 'on' : ''}" data-action="vote" data-id="${p.id}">
         ${p.id === session.participant_id ? '<span class="tag">나</span>' : ''}
         ${mine === p.id ? `<span class="check">${ICON.check(14, 3.2)}</span>` : ''}
         <span class="pick-emoji">${emo(p.emoji)}</span>
         <span class="pick-name">${esc(p.nickname)}</span>
       </button>`).join('');
-    const hint = mine ? `${ICON.check(16, 3)} 투표 완료! 모두 투표하면 자동으로 넘어가요` : '한 명을 골라주세요';
+    const hint = mine ? `${ICON.check(16, 3)} 투표 완료! 모두 투표하면 자동으로 넘어가요` : askable(q) ? '한 명을 골라주세요' : '후보가 없어요. 호스트가 넘기면 다음으로 가요';
     return head + progress + `<div class="picks">${picks}</div><div class="vote-hint">${hint}</div>`;
   }
   if (q.status === 'closed') {
@@ -989,7 +1037,7 @@ function finishedHTML() {
       <h2 class="display">투표가 모두 끝났어요!</h2>
       <p>${isHost() ? '이제 순서대로 결과를 공개해요.' : '호스트가 결과 발표를 시작하면<br>순서대로 공개돼요.'}</p>
     </div>
-    ${closed.length ? `<ol class="card q-secret">${closed.map((q) => `<li><b>Q${no(q)}</b><span>${esc(q.text)}</span><i aria-label="결과 미공개">?</i></li>`).join('')}</ol>` : ''}`;
+    ${closed.length ? `<ol class="card q-secret">${closed.map((q) => `<li><b>Q${no(q)}</b><span>${esc(q.text)}</span><i class="q" aria-label="결과 미공개">?</i></li>`).join('')}</ol>` : ''}`;
 }
 function tallyFor(qid) {
   const m = S.results.get(qid) || new Map();
@@ -1063,7 +1111,7 @@ function summaryHTML() {
     <div class="card" style="padding:6px 16px">${qList}</div>`;
 }
 function nextDraft() {
-  const drafts = S.questions.filter((q) => q.status === 'draft');
+  const drafts = S.questions.filter((q) => q.status === 'draft' && askable(q)); // 후보가 없는 질문은 건너뜀
   if (!drafts.length) return null;
   const cur = currentQuestion();
   if (cur) { const after = drafts.find((q) => q.sort_order > cur.sort_order); if (after) return after; }
@@ -1114,7 +1162,7 @@ function hostCardHTML() {
     } else if (unrevealed.length) {
       row = list + main({ action: 'host-next-result', icon: ICON.play(22), title: '결과 발표 시작', sub: `Q${qno(unrevealed[0])}부터 하나씩 공개해요` });
     } else {
-      row = list + main({ icon: ICON.play(22), title: started ? '다음 질문 시작' : '첫 질문 시작', sub: '질문을 추가하면 시작할 수 있어요' });
+      row = list + main({ icon: ICON.play(22), title: started ? '다음 질문 시작' : '첫 질문 시작', sub: S.questions.some((q) => q.status === 'draft') ? '후보가 있는 질문이 없어요' : '질문을 추가하면 시작할 수 있어요' });
     }
   }
   return `<div class="hostcard"><div class="hc-top">${top}<small>호스트 전용</small></div>${body}<div class="hc-row">${row}</div>${extra}</div>`;
@@ -1163,6 +1211,7 @@ function openHostPanel(el) {
         <input id="q-input" maxlength="200" placeholder="새 질문을 입력하세요" enterkeyhint="done" autocomplete="off">
         <button class="btn" type="submit">추가</button>
       </div>
+      ${targetPick()}
     </form>`);
   renderHostLists();
   fitSheet();
@@ -1180,7 +1229,7 @@ function renderHostLists() {
     list.innerHTML = S.participants.map((p) => `
       <div class="list-item">
         <i class="dot ${S.online.has(p.id) ? '' : 'off'}"></i>
-        <div class="grow"><div class="t">${emo(p.emoji)} ${esc(p.nickname)}${p.id === S.room.host_participant_id ? ' ' + emo('👑') : ''}</div></div>
+        <div class="grow"><div class="t">${emo(p.emoji)} ${esc(p.nickname)}${p.id === S.room.host_participant_id ? ' ' + emo('👑') : ''}</div><div class="hint" style="margin-top:2px">${GENDER_LABEL[p.gender] || '성별 미선택'}</div></div>
         ${p.id !== S.room.host_participant_id ? `<div class="acts"><button class="btn danger xs" data-action="host-remove-p" data-id="${p.id}">내보내기</button></div>` : ''}
       </div>`).join('');
     return;
@@ -1189,17 +1238,24 @@ function renderHostLists() {
   list.innerHTML = S.questions.length ? S.questions.map((q, i) => {
     const meta = q.status === 'open' ? `${q.vote_count}/${n}명 투표`
       : q.status === 'closed' ? '결과는 마지막에 공개'
+      : q.status === 'draft' && !askable(q) ? '후보가 없어 건너뛰어요'
       : next && q.id === next.id ? '다음 차례' : '';
     const del = q.status === 'draft'
       ? `<div class="acts"><button class="row-del" data-action="host-delete-q" data-q="${q.id}" aria-label="Q${i + 1} 삭제">${ICON.trash(18)}</button></div>` : '';
     return `
       <div class="list-item ${q.status === 'open' ? 'cur' : ''}">
         <span class="num">Q${i + 1}</span>
-        <div class="grow"><div class="t">${esc(q.text)}</div><div class="q-meta">${statusPill(q.status, true)}${meta ? `<span class="hint">${meta}</span>` : ''}</div></div>
+        <div class="grow"><div class="t">${esc(q.text)}</div><div class="q-meta">${statusPill(q.status, true)}${targetTag(q)}${meta ? `<span class="hint">${meta}</span>` : ''}</div></div>
         ${del}
       </div>`;
   }).join('') : `<div class="empty">아직 질문이 없어요. 아래에서 추가해 주세요.</div>`;
   if (panelToBottom) { panelToBottom = false; list.scrollTop = list.scrollHeight; }
+}
+function setAddTarget(t) {
+  addTarget = t;
+  document.querySelectorAll('.target-pick button').forEach((b) => {
+    b.classList.toggle('on', b.dataset.t === t); b.setAttribute('aria-checked', b.dataset.t === t);
+  });
 }
 async function addQuestion(form) {
   const inp = form.querySelector('input'), btn = form.querySelector('button[type=submit]');
@@ -1207,8 +1263,9 @@ async function addQuestion(form) {
   if (!text) return toast('질문을 입력해주세요');
   btn.disabled = true;
   try {
-    await rpc('host_add_questions', { p_token: session.token, p_texts: [text] });
+    await rpc('host_add_questions', { p_token: session.token, p_texts: [text], p_targets: [addTarget] });
     inp.value = '';
+    setAddTarget('all');
     if (document.contains(inp)) inp.focus();
     toast('질문을 추가했어요');
     panelToBottom = true;
@@ -1443,6 +1500,12 @@ const actions = {
     grid.dataset.value = el.dataset.e;
     grid.querySelectorAll('button').forEach((b) => { b.classList.toggle('on', b === el); b.setAttribute('aria-pressed', b === el); });
   },
+  'pick-gender'(el) {
+    const box = el.closest('.gender');
+    box.dataset.value = el.dataset.g;
+    box.querySelectorAll('button').forEach((b) => { b.classList.toggle('on', b === el); b.setAttribute('aria-checked', b === el); });
+  },
+  'pick-target'(el) { setAddTarget(el.dataset.t); },
   'back-to-room'() {
     const s = loadSession(); if (!s) return;
     session = s;
@@ -1531,7 +1594,7 @@ const actions = {
     if (!add.length) return toast('예시 질문이 이미 모두 들어 있어요');
     el.disabled = true;
     try {
-      await rpc('host_add_questions', { p_token: session.token, p_texts: add });
+      await rpc('host_add_questions', { p_token: session.token, p_texts: add.map((a) => a[0]), p_targets: add.map((a) => a[1]) });
       toast(`예시 질문 ${add.length}개를 추가했어요`);
       panelToBottom = true;
       scheduleRefresh();
