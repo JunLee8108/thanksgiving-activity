@@ -98,8 +98,8 @@ label.f{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:16
 
 /* Header */
 /* 방 상단 줄: 스크롤해도 채팅 버튼과 안 읽은 숫자가 항상 보이도록 위에 붙는다 */
-.top{position:sticky;top:0;z-index:15;display:flex;align-items:center;justify-content:space-between;gap:12px;
-  margin:-16px -16px 8px;padding:calc(16px + env(safe-area-inset-top)) 16px 10px;transition:background .2s,box-shadow .2s}
+.top{position:sticky;top:0;z-index:15;display:flex;align-items:center;justify-content:space-between;gap:8px;
+  margin:-16px -16px 10px;padding:calc(10px + env(safe-area-inset-top)) 16px 8px;transition:background .2s,box-shadow .2s}
 .top.stuck{background:rgba(251,244,233,.88);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);box-shadow:0 1px 0 var(--line)}
 /* 새 채팅 메시지 미리보기: 상단 줄 바로 아래에 잠깐 떴다가 사라진다 */
 #peek{position:fixed;left:0;right:0;z-index:16;display:flex;justify-content:center;padding:0 16px;pointer-events:none}
@@ -111,7 +111,7 @@ label.f{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:16
 .peek-in span{flex:1;min-width:0;color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #peek.out .peek-in{opacity:0;transform:translateY(-6px);transition:opacity .2s,transform .2s}
 @keyframes peekIn{0%{transform:translateY(-10px) scale(.96);opacity:0}100%{transform:none;opacity:1}}
-.room-name{font-size:22px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.room-name{flex:1;min-width:0;font-size:19px;line-height:38px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .meta{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap}
 .chip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:999px;background:var(--card);border:1.5px solid var(--line);font-size:13px;font-weight:700}
 .chip.code{letter-spacing:.08em}
@@ -297,7 +297,17 @@ a.btn{text-decoration:none}
 .share-link{font-size:13px;color:var(--ink3);text-align:center;word-break:break-all;margin-bottom:14px}
 
 /* Chat */
-.top-acts{display:flex;gap:8px;flex-shrink:0}
+/* 상단 줄 오른쪽: 인원 · 초대 링크 · 채팅 · 메뉴 */
+.top-acts{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.top-acts .icon-btn{width:38px;height:38px;border-radius:11px}
+.top-acts .chip{height:30px;padding:0 9px;gap:5px}
+.top-acts .badge{top:-6px;right:-6px}
+/* 메뉴 맨 위: 내 이름 옆 호스트 표시 */
+.sheet-h{gap:10px}
+.sheet-h h3{min-width:0}
+.sheet-h .icon-btn{flex-shrink:0}
+.sheet-h .me-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sheet-h .chip{flex-shrink:0;height:26px;padding:0 9px;gap:4px;font-family:Pretendard,-apple-system,BlinkMacSystemFont,system-ui,sans-serif;font-size:12px;font-weight:800}
 .chat-btn{position:relative}
 .badge{position:absolute;top:-7px;right:-7px;min-width:21px;height:21px;padding:0 5px;border-radius:11px;background:var(--cran);color:#fff;
   font-size:11px;font-weight:800;line-height:1;display:grid;place-items:center;border:2px solid var(--bg)}
@@ -1073,17 +1083,12 @@ function renderHeader() {
   const online = S.participants.filter((p) => S.online.has(p.id)).length;
   const unread = chatUnread();
   $('#hdr').innerHTML = `
-    <div style="min-width:0">
-      <div class="room-name display">${esc(S.room.name)}</div>
-      <div class="meta">
-        <button class="chip code" data-action="share">${ICON.link(14, 2.4)}${esc(S.room.code)}</button>
-        <span class="chip"><i class="dot"></i>${online}/${S.participants.length}명</span>
-        ${isHost() ? `<span class="chip host">${emo('👑')}호스트</span>` : ''}
-      </div>
-    </div>
+    <div class="room-name display">${esc(S.room.name)}</div>
     <div class="top-acts">
-      <button class="icon-btn chat-btn" data-action="chat" aria-label="채팅${unread ? ` (안 읽은 메시지 ${unread}개)` : ''}">${ICON.chat(20)}${unread ? `<span class="badge">${unread > 99 ? '99+' : unread}</span>` : ''}</button>
-      <button class="icon-btn" data-action="menu" aria-label="메뉴">${ICON.dots(20, 3)}</button>
+      <span class="chip" role="img" aria-label="${S.participants.length}명 중 ${online}명 접속"><i class="dot"></i>${online}/${S.participants.length}</span>
+      <button class="icon-btn" data-action="share" aria-label="친구 초대 (방 코드 ${esc(S.room.code)})">${ICON.link(18)}</button>
+      <button class="icon-btn chat-btn" data-action="chat" aria-label="채팅${unread ? ` (안 읽은 메시지 ${unread}개)` : ''}">${ICON.chat(18)}${unread ? `<span class="badge">${unread > 99 ? '99+' : unread}</span>` : ''}</button>
+      <button class="icon-btn" data-action="menu" aria-label="메뉴">${ICON.dots(18, 3)}</button>
     </div>`;
 }
 function renderStage() {
@@ -1669,7 +1674,7 @@ function renderMenu() {
   const body = $('#menu-body'); if (!body) return;
   const m = me();
   body.innerHTML = `
-    <div class="sheet-h"><h3 class="display">${m ? emo(m.emoji) + esc(m.nickname) : '메뉴'}</h3><button class="icon-btn" data-action="close-sheet" aria-label="닫기">${ICON.x(18, 2.4)}</button></div>
+    <div class="sheet-h"><h3 class="display">${m ? emo(m.emoji) + `<span class="me-name">${esc(m.nickname)}</span>` + (isHost() ? `<span class="chip host">${ICON.crown(13, 2.4)}호스트</span>` : '') : '메뉴'}</h3><button class="icon-btn" data-action="close-sheet" aria-label="닫기">${ICON.x(18, 2.4)}</button></div>
     <section style="margin-top:8px">
       <button class="menu-btn" data-action="share"><span>${ICON.link(20)}</span>친구 초대 (QR · 링크)</button>
       <button class="menu-btn" data-action="toggle-sound"><span>${soundOn ? ICON.sound(20) : ICON.mute(20)}</span>효과음 ${soundOn ? '켜짐' : '꺼짐'}</button>
