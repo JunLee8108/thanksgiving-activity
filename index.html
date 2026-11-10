@@ -188,6 +188,33 @@ label.f{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:16
 .share-code{font-size:40px;text-align:center;letter-spacing:.12em;margin:6px 0 2px}
 .share-link{font-size:13px;color:var(--ink3);text-align:center;word-break:break-all;margin-bottom:14px}
 
+/* Chat */
+.top-acts{display:flex;gap:8px;flex-shrink:0}
+.chat-btn{position:relative}
+.badge{position:absolute;top:-7px;right:-7px;min-width:21px;height:21px;padding:0 5px;border-radius:11px;background:var(--cran);color:#fff;
+  font-size:11px;font-weight:800;line-height:1;display:grid;place-items:center;border:2px solid var(--bg)}
+.sheet.chat{display:flex;flex-direction:column;height:88dvh;overflow:hidden;padding-bottom:0}
+.sheet.chat .sheet-h{margin-bottom:0;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.chat-list{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:3px;padding:8px 2px 12px}
+.chat-empty{margin:auto;text-align:center;color:var(--ink3);font-size:14px;line-height:1.6}
+.msg{display:flex;flex-direction:column;align-items:flex-start;max-width:84%}
+.msg.me{align-self:flex-end;align-items:flex-end}
+.msg.head{margin-top:10px}
+.chat-list>:first-child{margin-top:auto}
+.msg.new{animation:pop .25s}
+.msg-who{font-size:12px;font-weight:700;color:var(--ink2);margin:0 4px 4px}
+.msg-who time{font-weight:600;color:var(--ink3);margin-left:6px}
+.msg.me .msg-who time{margin-left:0}
+.msg-row{display:flex;align-items:center;gap:6px;max-width:100%}
+.msg.me .msg-row{flex-direction:row-reverse}
+.bubble{min-width:0;padding:9px 13px;border-radius:18px;background:var(--bg2);font-size:15px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.me .bubble{background:var(--pumpkin);color:#fff}
+.msg.pending .bubble{opacity:.55}
+.msg-del{flex-shrink:0;width:26px;height:26px;border-radius:50%;font-size:11px;color:var(--ink3);background:var(--bg);border:1px solid var(--line)}
+.chat-form{display:flex;gap:8px;padding:10px 0 calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}
+.chat-form input{flex:1;min-width:0;height:46px;padding:0 16px;border-radius:23px}
+.chat-form .btn{height:46px;padding:0 18px;border-radius:23px;font-size:15px}
+
 /* Reveal overlay */
 #overlay{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:rgba(43,26,16,.94);color:#fff;opacity:0;transition:opacity .25s;padding:24px}
 #overlay.show{opacity:1}
@@ -233,6 +260,8 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 const LS_SESSION = 'tg-awards-session';
 const LS_NICK = 'tg-awards-nick';
 const LS_SOUND = 'tg-awards-sound';
+const LS_CHAT_READ = 'tg-awards-chat-read';
+const CHAT_MAX = 200;
 const EMOJIS = ['🦃','🥧','🌽','🍂','🍁','🍗','🥔','🍠','🎃','🍷','☕','😎','🤠','👻','🐻','🦊'];
 const REACTS = ['😂','🔥','👏','🦃','😱','❤️'];
 const SAMPLE_QUESTIONS = [
@@ -257,6 +286,9 @@ const ERRORS = {
   QUESTION_NOT_FOUND: '질문을 찾을 수 없어요',
   BAD_TRANSITION: '지금 상태에서는 할 수 없어요',
   CANNOT_REMOVE_HOST: '호스트는 내보낼 수 없어요',
+  MESSAGE_EMPTY: '메시지를 입력해주세요',
+  MESSAGE_TOO_LONG: '메시지는 200자까지 보낼 수 있어요',
+  TOO_FAST: '메시지를 너무 빨리 보내고 있어요. 잠시 후 다시 보내주세요',
 };
 
 /* ================= State ================= */
@@ -269,6 +301,9 @@ let lastOpenSeen = null;
 let pollTimer = null;
 let sheetKind = null;
 let soundOn = lsGet(LS_SOUND) !== 'off';
+// msgs: 서버에 저장된 메시지(id 오름차순), pending: 전송 중인 내 메시지
+const chat = { msgs: [], pending: [], lastRead: 0, hasRead: false, loaded: false, shownMax: 0 };
+let chatBusy = false, chatQueued = 0, chatTmp = 0;
 
 /* ================= Utils ================= */
 const $ = (s, r = document) => r.querySelector(s);
@@ -503,11 +538,12 @@ async function enterRoom() {
   teardownRoom();
   firstLoad = true; seenRevealed = new Set(); lastOpenSeen = null;
   Object.assign(S, { room: null, participants: [], questions: [], online: new Set(), myVotes: {}, results: new Map() });
+  resetChat();
   $('#app').innerHTML = `<div class="wrap"><header class="top" id="hdr"></header><main id="stage"><div class="card center" style="padding:40px">불러오는 중… 🦃</div></main></div>`;
   await refresh();
   if (!session) return;
   subscribe();
-  pollTimer = setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 8000);
+  pollTimer = setInterval(() => { if (document.visibilityState === 'visible') { refresh(); syncChat(false); } }, 8000);
 }
 function kicked(msg) {
   const code = session?.code;
@@ -575,16 +611,19 @@ function subscribe() {
       S.online = new Set(Object.keys(channel.presenceState()));
       if (S.room) { renderHeader(); if (S.room.phase === 'lobby' || !currentQuestion()) renderStage(); if (sheetKind === 'host') renderHostLists(); }
     })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: 'room_id=eq.' + rid }, (p) => onChatInsert(p.new))
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, (p) => onChatDelete(p.old?.id))
     .on('broadcast', { event: 'react' }, ({ payload }) => floatEmoji(payload?.e))
     .subscribe(async (status) => {
       $('#conn').hidden = status === 'SUBSCRIBED' || !session;
       if (status === 'SUBSCRIBED') {
         await channel.track({ at: Date.now() });
         scheduleRefresh();
+        syncChat(true);
       }
     });
 }
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && session) scheduleRefresh(); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && session) { scheduleRefresh(); syncChat(true); } });
 
 /* ================= Render: room ================= */
 function render() {
@@ -594,6 +633,7 @@ function render() {
   renderDock();
   if (sheetKind === 'host') renderHostLists();
   if (sheetKind === 'menu') renderMenu();
+  if (sheetKind === 'chat') renderChatList();
 
   const cur = currentQuestion();
   if (cur && S.room.phase === 'question') {
@@ -609,6 +649,7 @@ function render() {
 }
 function renderHeader() {
   const online = S.participants.filter((p) => S.online.has(p.id)).length;
+  const unread = chatUnread();
   $('#hdr').innerHTML = `
     <div style="min-width:0">
       <div class="room-name display">${esc(S.room.name)}</div>
@@ -618,7 +659,10 @@ function renderHeader() {
         ${isHost() ? '<span class="chip host">👑 호스트</span>' : ''}
       </div>
     </div>
-    <button class="icon-btn" data-action="menu" aria-label="메뉴">⋯</button>`;
+    <div class="top-acts">
+      <button class="icon-btn chat-btn" data-action="chat" aria-label="채팅${unread ? ` (안 읽은 메시지 ${unread}개)` : ''}">💬${unread ? `<span class="badge">${unread > 99 ? '99+' : unread}</span>` : ''}</button>
+      <button class="icon-btn" data-action="menu" aria-label="메뉴">⋯</button>
+    </div>`;
 }
 function renderStage() {
   const st = $('#stage'); if (!st) return;
@@ -795,6 +839,8 @@ function renderDock() {
 function openSheet(kind, html) {
   sheetKind = kind;
   const sh = $('#sheet'), sc = $('#scrim');
+  sh.classList.toggle('chat', kind === 'chat');
+  sh.style.height = sh.style.bottom = '';
   sh.innerHTML = `<div class="grab"></div>` + html;
   sh.hidden = false; sc.hidden = false;
   requestAnimationFrame(() => { sh.classList.add('show'); sc.classList.add('show'); });
@@ -803,8 +849,13 @@ function closeSheet() {
   if (!sheetKind) return;
   sheetKind = null;
   const sh = $('#sheet'), sc = $('#scrim');
+  if (sh.contains(document.activeElement)) document.activeElement.blur();
   sh.classList.remove('show'); sc.classList.remove('show');
-  setTimeout(() => { if (!sheetKind) { sh.hidden = true; sc.hidden = true; sh.innerHTML = ''; } }, 280);
+  setTimeout(() => {
+    if (sheetKind) return;
+    sh.hidden = true; sc.hidden = true; sh.innerHTML = '';
+    sh.classList.remove('chat'); sh.style.height = sh.style.bottom = '';
+  }, 280);
 }
 $('#scrim').addEventListener('click', closeSheet);
 
@@ -900,6 +951,168 @@ function openClaimHost() {
   setTimeout(() => $('#claim-pin')?.focus(), 300);
 }
 
+/* ================= Chat ================= */
+const lastMsgId = () => (chat.msgs.length ? chat.msgs[chat.msgs.length - 1].id : 0);
+const fmtTime = (d) => d.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' });
+function resetChat() {
+  Object.assign(chat, { msgs: [], pending: [], lastRead: 0, hasRead: false, loaded: false, shownMax: 0 });
+  try {
+    const r = JSON.parse(lsGet(LS_CHAT_READ) || 'null');
+    if (r && r.room === session.room_id) { chat.lastRead = Number(r.id) || 0; chat.hasRead = true; }
+  } catch {}
+}
+function chatUnread() {
+  const mine = session?.participant_id;
+  return chat.msgs.reduce((n, m) => n + (m.id > chat.lastRead && m.participant_id !== mine ? 1 : 0), 0);
+}
+function putMsg(row) {
+  const id = Number(row?.id);
+  if (!id || chat.msgs.some((m) => m.id === id)) return false;
+  chat.msgs.push({ id, participant_id: row.participant_id, text: row.text, created_at: row.created_at });
+  if (chat.msgs.length > 1 && chat.msgs[chat.msgs.length - 2].id > id) chat.msgs.sort((a, b) => a.id - b.id);
+  if (chat.msgs.length > CHAT_MAX) chat.msgs.splice(0, chat.msgs.length - CHAT_MAX);
+  return true;
+}
+function dropPending(tmp) { chat.pending = chat.pending.filter((m) => m !== tmp); }
+// full: 최근 메시지를 통째로 다시 받아 삭제분까지 맞춤 / 아니면 마지막 id 이후만
+async function syncChat(full) {
+  if (!session) return;
+  if (chatBusy) { chatQueued = Math.max(chatQueued, full ? 2 : 1); return; }
+  chatBusy = true;
+  const rid = session.room_id;
+  try {
+    const whole = full || !chat.loaded;
+    let q = sb.from('messages').select('id,participant_id,text,created_at').eq('room_id', rid);
+    q = whole ? q.order('id', { ascending: false }).limit(CHAT_MAX) : q.gt('id', lastMsgId()).order('id').limit(CHAT_MAX);
+    const { data, error } = await q;
+    if (error) throw error;
+    if (session?.room_id !== rid) return;
+    if (whole) {
+      const rows = data.reverse().map((r) => ({ ...r, id: Number(r.id) }));
+      const top = rows.length ? rows[rows.length - 1].id : 0;
+      chat.msgs = rows.concat(chat.msgs.filter((m) => m.id > top)); // 받는 사이 실시간으로 도착한 것 유지
+      if (!chat.loaded) {
+        chat.loaded = true;
+        if (!chat.hasRead) chat.lastRead = lastMsgId(); // 처음 입장: 기존 대화는 읽은 것으로
+      }
+    } else data.forEach(putMsg);
+    chatChanged();
+  } catch (e) { console.error(e); }
+  finally {
+    chatBusy = false;
+    if (chatQueued) { const f = chatQueued === 2; chatQueued = 0; syncChat(f); }
+  }
+}
+function onChatInsert(row) {
+  if (!row || !session) return;
+  if (row.participant_id === session.participant_id) {
+    const i = chat.pending.findIndex((m) => m.text === row.text);
+    if (i >= 0) chat.pending.splice(i, 1);
+  }
+  putMsg(row);
+  if (!S.participants.some((p) => p.id === row.participant_id)) scheduleRefresh();
+  chatChanged();
+}
+function onChatDelete(id) {
+  id = Number(id);
+  if (!chat.msgs.some((m) => m.id === id)) return;
+  chat.msgs = chat.msgs.filter((m) => m.id !== id);
+  chatChanged();
+}
+function chatChanged(stick) {
+  if (sheetKind === 'chat') { renderChatList(stick); markChatRead(); }
+  else if (S.room && $('#hdr')) renderHeader();
+}
+function markChatRead() {
+  const last = lastMsgId();
+  if (last > chat.lastRead) {
+    chat.lastRead = last;
+    lsSet(LS_CHAT_READ, JSON.stringify({ room: session.room_id, id: last }));
+  }
+  chat.hasRead = true;
+  if (S.room && $('#hdr')) renderHeader();
+}
+function renderChatList(stick) {
+  const box = $('#chat-list'); if (!box) return;
+  const atBottom = stick || box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+  const byId = new Map(S.participants.map((p) => [p.id, p]));
+  const mine = session.participant_id, host = isHost();
+  let prev = null, html = '';
+  for (const m of chat.msgs.concat(chat.pending)) {
+    const isMe = m.participant_id === mine;
+    const t = new Date(m.created_at);
+    const head = !prev || prev.participant_id !== m.participant_id || t - new Date(prev.created_at) > 5 * 60000;
+    const p = byId.get(m.participant_id);
+    const who = head ? `<div class="msg-who">${isMe ? '' : esc(p ? p.emoji + ' ' + p.nickname : '👤 나간 참가자')}<time>${fmtTime(t)}</time></div>` : '';
+    const del = host && m.id ? `<button class="msg-del" data-action="chat-delete" data-id="${m.id}" aria-label="메시지 삭제">✕</button>` : '';
+    const cls = 'msg' + (isMe ? ' me' : '') + (head ? ' head' : '') + (m.pending ? ' pending' : '') + (!isMe && m.id > chat.shownMax ? ' new' : '');
+    html += `<div class="${cls}">${who}<div class="msg-row"><div class="bubble">${esc(m.text)}</div>${del}</div></div>`;
+    prev = m;
+  }
+  box.innerHTML = html || `<div class="chat-empty">아직 메시지가 없어요<br>첫 마디를 남겨보세요 👋</div>`;
+  chat.shownMax = Math.max(chat.shownMax, lastMsgId());
+  if (atBottom) box.scrollTop = box.scrollHeight;
+}
+function openChat() {
+  openSheet('chat', `
+    <div class="sheet-h"><h3 class="display">💬 채팅</h3><button class="icon-btn" data-action="close-sheet" aria-label="닫기">✕</button></div>
+    <div id="chat-list" class="chat-list" aria-live="polite"></div>
+    <form id="chat-form" class="chat-form" autocomplete="off">
+      <input id="chat-input" maxlength="200" placeholder="메시지 보내기" enterkeyhint="send" autocomplete="off" aria-label="메시지">
+      <button class="btn" type="submit">보내기</button>
+    </form>`);
+  chat.shownMax = lastMsgId(); // 이미 와 있던 메시지는 등장 애니메이션 없이
+  renderChatList(true);
+  markChatRead();
+  $('#chat-form').addEventListener('submit', (e) => { e.preventDefault(); sendChat(); });
+  // 보내기 버튼을 눌러도 입력창 포커스(모바일 키보드)가 유지되도록
+  const keep = (e) => e.preventDefault();
+  $('#chat-form .btn').addEventListener('pointerdown', keep);
+  $('#chat-form .btn').addEventListener('mousedown', keep);
+  fitChat();
+  if (!chat.loaded) syncChat(true);
+  if (matchMedia('(pointer:fine)').matches) setTimeout(() => $('#chat-input')?.focus(), 300);
+}
+async function sendChat() {
+  const inp = $('#chat-input'); if (!inp || !session) return;
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = '';
+  const rid = session.room_id;
+  const tmp = { tmp: ++chatTmp, participant_id: session.participant_id, text, created_at: new Date().toISOString(), pending: true };
+  chat.pending.push(tmp);
+  chatChanged(true);
+  try {
+    const res = await rpc('send_message', { p_token: session.token, p_text: text });
+    if (session?.room_id !== rid) return;
+    dropPending(tmp);
+    putMsg({ id: res.id, participant_id: tmp.participant_id, text, created_at: res.created_at });
+  } catch (err) {
+    if (session?.room_id !== rid) return;
+    dropPending(tmp);
+    const cur = $('#chat-input');
+    if (cur && !cur.value) cur.value = text; // 실패하면 쓴 글을 돌려줌
+    toast(errMsg(err));
+    if (String(err?.message || '').includes('INVALID_SESSION')) scheduleRefresh();
+  }
+  chatChanged(true);
+}
+// 모바일 키보드가 올라오면 시트를 키보드 위로 올리고 높이를 보이는 영역에 맞춤
+function fitChat() {
+  const vv = window.visualViewport;
+  if (sheetKind !== 'chat' || !vv || vv.scale > 1.01) return;
+  const sh = $('#sheet'), box = $('#chat-list');
+  const stick = box && box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+  const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+  sh.style.bottom = kb > 1 ? kb + 'px' : '';
+  sh.style.height = kb > 1 ? Math.min(vv.height - 8, window.innerHeight * 0.88) + 'px' : '';
+  if (stick) box.scrollTop = box.scrollHeight;
+}
+if (window.visualViewport) {
+  visualViewport.addEventListener('resize', fitChat);
+  visualViewport.addEventListener('scroll', fitChat);
+}
+
 /* ================= Actions ================= */
 let lastReact = 0;
 const actions = {
@@ -942,6 +1155,13 @@ const actions = {
   },
   menu: openMenu,
   share: openShare,
+  chat: openChat,
+  async 'chat-delete'(el) {
+    const id = Number(el.dataset.id);
+    if (!confirm('이 메시지를 삭제할까요?')) return;
+    try { await rpc('host_delete_message', { p_token: session.token, p_message_id: id }); onChatDelete(id); }
+    catch (err) { toast(errMsg(err)); }
+  },
   'close-sheet': closeSheet,
   'host-panel': openHostPanel,
   'claim-host': openClaimHost,
