@@ -252,7 +252,20 @@ a.btn{text-decoration:none}
 .q-secret i.q{flex-shrink:0;width:22px;height:22px;border-radius:50%;background:var(--bg2);color:var(--ink2);display:grid;place-items:center;font-size:12px;font-weight:800;font-style:normal}
 
 /* Host panel sheet */
-.sheet.panel .seg{margin:10px 0 6px;flex-shrink:0}
+.panel-top{display:flex;align-items:center;gap:8px;margin:10px 0 6px;flex-shrink:0}
+.panel-top .seg{flex:1;margin:0}
+.panel-top .btn{flex-shrink:0;height:48px;border-radius:13px}
+/* 질문 여러 개 선택 */
+.ck{flex-shrink:0;width:26px;height:26px;border-radius:8px;border:2px solid var(--line);background:#fff;color:#fff;display:grid;place-items:center}
+.ck.on{background:var(--pumpkin-d);border-color:var(--pumpkin-d)}
+.list-item.pickable{cursor:pointer}
+.list-item.sel{background:var(--pumpkin-l);margin:0 -10px;padding:11px 10px;border-radius:12px;border-bottom-color:transparent}
+.list-item.dim{opacity:.45}
+.list-item.dim .ck{visibility:hidden}
+.panel-pick{flex-shrink:0;display:flex;align-items:center;gap:8px;border-top:1px solid var(--line);padding:10px 0 calc(12px + env(safe-area-inset-bottom))}
+.panel-pick b{flex:1;min-width:0;font-size:14px;font-weight:800}
+.panel-pick .mini{height:44px;padding:0 6px;font-size:13px;font-weight:700;color:var(--pumpkin-d)}
+.panel-pick .btn{flex-shrink:0;height:44px;padding:0 14px;font-size:14px;border-radius:12px}
 .panel-list{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 10px;margin:0 -10px}
 .panel-add{flex-shrink:0;border-top:1px solid var(--line);padding:4px 0 calc(12px + env(safe-area-inset-bottom))}
 .panel-add .lbl{display:flex;align-items:center;justify-content:space-between;min-height:44px}
@@ -556,6 +569,8 @@ let lastOpenSeen = null;
 let pollTimer = null;
 let sheetKind = null;
 let hostTab = 'q';        // 진행 관리 시트의 탭: q(질문) | p(참가자)
+let pickMode = false;     // 진행 관리에서 질문을 여러 개 골라 지우는 중인지
+const picked = new Set(); // 골라 둔 질문 id
 let panelToBottom = false; // 질문을 추가한 뒤 목록을 맨 아래로
 let stageHTML = '';
 let addTarget = 'all';     // 새로 추가할 질문의 후보 범위
@@ -1592,10 +1607,15 @@ $('#scrim').addEventListener('click', closeSheet);
 
 function openHostPanel(el) {
   hostTab = el?.dataset?.tab || 'q';
+  pickMode = false; picked.clear();
   openSheet('host', `
     <div class="sheet-h"><h3 class="display">진행 관리</h3><button class="icon-btn" data-action="close-sheet" aria-label="닫기">${ICON.x(18, 2.4)}</button></div>
-    <div class="seg" id="host-tabs"></div>
+    <div class="panel-top">
+      <div class="seg" id="host-tabs"></div>
+      <button type="button" class="btn ghost sm" id="pick-start" data-action="pick-start">선택</button>
+    </div>
     <div id="host-list" class="panel-list"></div>
+    <div id="host-pick" class="panel-pick" hidden></div>
     <form id="host-add" class="panel-add" data-form="add-q" autocomplete="off">
       <div class="lbl"><label for="q-input">질문 추가</label><button type="button" class="mini" id="sample-btn" data-action="sample-questions">${ICON.plus(16, 2.2)}예시 질문 넣기</button></div>
       <div class="add-row">
@@ -1614,8 +1634,23 @@ function renderHostLists() {
   const n = S.participants.length;
   tabs.innerHTML = [['q', `질문 ${S.questions.length}`], ['p', `참가자 ${n}`]].map(([k, t]) =>
     `<button type="button" data-action="host-tab" data-tab="${k}" class="${hostTab === k ? 'on' : ''}" aria-pressed="${hostTab === k}">${t}</button>`).join('');
-  add.hidden = hostTab !== 'q';
+  // 지울 수 있는 것은 아직 시작하지 않은 질문뿐
+  const drafts = S.questions.filter((q) => q.status === 'draft');
+  if (hostTab !== 'q' || !drafts.length) pickMode = false;
+  if (!pickMode) picked.clear();
+  for (const id of [...picked]) if (!drafts.some((q) => q.id === id)) picked.delete(id);
+  add.hidden = hostTab !== 'q' || pickMode;
   $('#sample-btn').hidden = !missingSamples().length;
+  $('#pick-start').hidden = hostTab !== 'q' || pickMode || !drafts.length;
+  const bar = $('#host-pick');
+  bar.hidden = !pickMode;
+  if (pickMode) {
+    const all = picked.size === drafts.length;
+    bar.innerHTML = `<b aria-live="polite">${picked.size}개 선택</b>
+      <button type="button" class="mini" data-action="pick-all">${all ? '전체 해제' : '전체 선택'}</button>
+      <button type="button" class="btn cran" data-action="pick-delete"${picked.size ? '' : ' disabled'}>${ICON.trash(16)}삭제</button>
+      <button type="button" class="btn ghost" data-action="pick-cancel">취소</button>`;
+  }
   if (hostTab === 'p') {
     list.innerHTML = S.participants.map((p) => `
       <div class="list-item">
@@ -1633,6 +1668,15 @@ function renderHostLists() {
       : next && q.id === next.id ? '다음 차례' : '';
     const del = q.status === 'draft'
       ? `<div class="acts"><button class="row-del" data-action="host-delete-q" data-q="${q.id}" aria-label="Q${i + 1} 삭제">${ICON.trash(18)}</button></div>` : '';
+    if (pickMode) { // 선택 모드: 줄 전체를 눌러 고른다. 시작한 질문은 흐리게만 보여준다
+      const can = q.status === 'draft', on = picked.has(q.id);
+      return `
+      <div class="list-item ${can ? 'pickable' : 'dim'} ${on ? 'sel' : ''}"${can ? ` data-action="pick-q" data-q="${q.id}"` : ''}>
+        <button type="button" class="ck ${on ? 'on' : ''}" role="checkbox" aria-checked="${on}" aria-label="Q${i + 1} 선택"${can ? ` data-action="pick-q" data-q="${q.id}"` : ' disabled'}>${on ? ICON.check(16, 3.2) : ''}</button>
+        <span class="num">Q${i + 1}</span>
+        <div class="grow"><div class="t">${esc(q.text)}</div><div class="q-meta">${statusPill(q.status, true)}${targetTag(q)}</div></div>
+      </div>`;
+    }
     return `
       <div class="list-item ${q.status === 'open' ? 'cur' : ''}">
         <span class="num">Q${i + 1}</span>
@@ -1995,7 +2039,30 @@ const actions = {
     try { await navigator.share({ files: [exportFile], title: S.room?.name || '김김이홍남원 어워즈' }); }
     catch (e) { if (e?.name !== 'AbortError') toast('공유하지 못했어요. 저장하기를 이용해 주세요'); }
   },
-  'host-tab'(el) { hostTab = el.dataset.tab; renderHostLists(); },
+  'host-tab'(el) { hostTab = el.dataset.tab; pickMode = false; renderHostLists(); },
+  'pick-start'() { pickMode = true; picked.clear(); renderHostLists(); },
+  'pick-cancel'() { pickMode = false; renderHostLists(); },
+  'pick-q'(el) {
+    const id = el.dataset.q;
+    if (picked.has(id)) picked.delete(id); else picked.add(id);
+    renderHostLists();
+  },
+  'pick-all'() {
+    const drafts = S.questions.filter((q) => q.status === 'draft');
+    if (picked.size === drafts.length) picked.clear(); else drafts.forEach((q) => picked.add(q.id));
+    renderHostLists();
+  },
+  async 'pick-delete'(el) {
+    if (!picked.size || !confirm(`선택한 질문 ${picked.size}개를 삭제할까요?`)) return;
+    el.disabled = true;
+    try {
+      const n = await rpc('host_delete_questions', { p_token: session.token, p_ids: [...picked] });
+      toast(`질문 ${n}개를 삭제했어요`);
+      pickMode = false;
+      await refresh();
+      renderHostLists();
+    } catch (err) { toast(errMsg(err)); el.disabled = false; }
+  },
   'host-start'(el) { return hostRpc(el, 'host_start'); },
   'host-skip'(el) {
     const cur = currentQuestion();
