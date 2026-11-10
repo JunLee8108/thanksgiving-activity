@@ -150,9 +150,71 @@ label.f{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:16
 .reacts{display:flex;justify-content:space-between;gap:6px}
 .reacts button{flex:1;height:44px;border-radius:14px;background:var(--card);border:1.5px solid var(--line);font-size:22px;transition:transform .08s}
 .reacts button:active{transform:scale(.88)}
-.hostbar{display:flex;gap:8px;margin-top:10px}
-.hostbar .btn{flex:1}
-.hostbar .btn.dark{flex:0 0 auto;padding:0 14px}
+.btn svg{flex-shrink:0}
+
+/* Host card */
+.hostcard{background:var(--card);border:1.5px solid var(--line);border-radius:20px;padding:12px;margin-top:10px;display:flex;flex-direction:column;gap:10px;box-shadow:var(--shadow)}
+.hc-top{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px}
+.hc-top b{font-weight:800}
+.hc-top small{font-size:12px;font-weight:700;color:var(--ink2);flex-shrink:0}
+.hc-top .auto{display:inline-flex;align-items:center;gap:6px;font-weight:800;color:#4F5C36}
+.hc-top .auto i{width:8px;height:8px;border-radius:50%;background:#4F5C36}
+.hc-dots{display:inline-flex;gap:4px;margin-left:8px;vertical-align:middle}
+.hc-dots i{width:8px;height:8px;border-radius:50%;background:var(--line)}
+.hc-dots i.on{background:var(--pumpkin-d)}
+.hc-text{margin:0;font-size:13px;font-weight:500;line-height:1.5}
+.hc-wait{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:12px;font-weight:700;color:var(--ink2)}
+.hc-wait span{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 10px 0 8px;border-radius:999px;background:var(--bg);border:1.5px solid var(--line);font-size:13px;color:var(--ink)}
+.hc-row{display:flex;gap:8px}
+.hc-side{width:60px;height:56px;flex-shrink:0;border-radius:14px;background:var(--bg);border:1.5px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;font-weight:700;color:var(--ink2);transition:transform .08s}
+.hc-main{flex:1;min-width:0;height:56px;border-radius:14px;background:var(--pumpkin-d);color:#fff;display:flex;align-items:center;gap:10px;padding:0 14px;text-align:left;transition:transform .08s,filter .15s}
+.hc-main:active,.hc-side:active{transform:scale(.97)}
+.hc-main.ghost{background:var(--bg);color:var(--ink);border:1.5px solid var(--line)}
+.hc-main:disabled{background:var(--bg2);color:var(--ink2);pointer-events:none}
+.hc-side:disabled{opacity:.45;pointer-events:none}
+.hc-main svg,.hc-side svg{flex-shrink:0}
+.hc-main .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.hc-main .t b{font-size:16px;font-weight:800;line-height:1.25}
+.hc-main .t small{font-size:12px;font-weight:500;line-height:1.3;color:#FFF4EA;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hc-main.ghost .t b{font-size:15px}
+.hc-main.ghost .t small,.hc-main:disabled .t small{color:var(--ink2)}
+.hc-link{align-self:center;height:44px;padding:0 14px;margin:-6px 0;font-size:13px;font-weight:700;color:var(--ink2);text-decoration:underline}
+
+/* Host lobby & voting finished */
+.sec .btn{flex-shrink:0}
+.ic-badge{width:44px;height:44px;border-radius:14px;background:var(--pumpkin-l);color:var(--pumpkin-d);display:grid;place-items:center}
+.setup h2{font-size:24px;margin:12px 0 6px}
+.setup p{margin:0;color:var(--ink2);font-size:14px;line-height:1.55}
+.setup .btn.ghost{margin-top:10px;height:44px;font-size:14px}
+.add-row{display:flex;gap:8px}
+.add-row input{flex:1;min-width:0;height:48px;padding:0 14px}
+.add-row .btn{height:48px;flex-shrink:0;padding:0 16px;font-size:15px;border-radius:12px;background:var(--pumpkin-d)}
+.ready-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.ready-h h2{font-size:24px;margin:0}
+.ready-h .pill{display:inline-flex;align-items:center;gap:4px;color:#4F5C36}
+.q-preview{list-style:none;margin:0;padding:0}
+.q-preview li{display:flex;gap:10px;align-items:baseline;padding:11px 0;border-bottom:1px solid var(--line);font-size:14px;line-height:1.45;word-break:keep-all}
+.q-preview b{flex-shrink:0;width:28px;font-weight:800;color:var(--pumpkin-d)}
+.ready .more{padding:10px 0 0 38px;font-size:13px;color:var(--ink2)}
+.ready .row{margin-top:12px}
+.ic-round{width:60px;height:60px;margin:0 auto 10px;border-radius:50%;background:var(--gold-l);color:#7A4E0C;display:grid;place-items:center}
+.q-secret{list-style:none;margin:12px 0 0;padding:6px 16px}
+.q-secret li{display:flex;align-items:center;gap:8px;min-height:38px;font-size:13px;border-bottom:1px solid var(--line)}
+.q-secret li:last-child{border-bottom:0}
+.q-secret b{flex-shrink:0;width:28px;font-weight:800;color:var(--pumpkin-d)}
+.q-secret span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.q-secret i{flex-shrink:0;width:22px;height:22px;border-radius:50%;background:var(--bg2);color:var(--ink2);display:grid;place-items:center;font-size:12px;font-weight:800;font-style:normal}
+
+/* Host panel sheet */
+.sheet.panel .seg{margin:10px 0 6px;flex-shrink:0}
+.panel-list{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 10px;margin:0 -10px}
+.panel-add{flex-shrink:0;border-top:1px solid var(--line);padding:4px 0 calc(12px + env(safe-area-inset-bottom))}
+.panel-add .lbl{display:flex;align-items:center;justify-content:space-between;min-height:44px}
+.panel-add label{font-size:13px;font-weight:700;color:var(--ink2)}
+.panel-add .mini{height:44px;padding:0 4px;font-size:13px;font-weight:700;color:var(--pumpkin-d);display:inline-flex;align-items:center;gap:4px}
+.q-meta{display:flex;align-items:center;gap:6px;margin-top:5px}
+.q-meta .hint{margin:0}
+.row-del{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;color:var(--cran)}
 
 /* Floating reactions */
 #fx{position:fixed;inset:0;pointer-events:none;z-index:30;overflow:hidden}
@@ -193,7 +255,7 @@ label.f{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:16
 .chat-btn{position:relative}
 .badge{position:absolute;top:-7px;right:-7px;min-width:21px;height:21px;padding:0 5px;border-radius:11px;background:var(--cran);color:#fff;
   font-size:11px;font-weight:800;line-height:1;display:grid;place-items:center;border:2px solid var(--bg)}
-.sheet.chat{display:flex;flex-direction:column;height:88dvh;overflow:hidden;padding-bottom:0}
+.sheet.chat,.sheet.panel{display:flex;flex-direction:column;height:88dvh;overflow:hidden;padding-bottom:0}
 .sheet.chat .sheet-h{margin-bottom:0;padding-bottom:8px;border-bottom:1px solid var(--line)}
 .chat-list{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:3px;padding:8px 2px 12px}
 .chat-empty{margin:auto;text-align:center;color:var(--ink3);font-size:14px;line-height:1.6}
@@ -222,6 +284,17 @@ label.f{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:16
 .rv-q{color:#E9D6BE;font-size:17px;line-height:1.5;margin-bottom:26px;word-break:keep-all}
 .drum{font-size:96px;line-height:1;display:inline-block;animation:drum .12s linear infinite}
 .rv-t{font-size:34px;margin-top:20px;animation:pulse .5s ease-in-out infinite alternate}
+#overlay.light{background:var(--bg);color:var(--ink)}
+.iv{width:100%;max-width:380px;text-align:center}
+.iv-ic{width:72px;height:72px;margin:0 auto 14px;border-radius:50%;background:var(--sage-l);color:#4F5C36;display:grid;place-items:center;animation:pop .45s cubic-bezier(.2,1.4,.4,1)}
+.iv h2{font-size:30px;margin:0 0 8px}
+.iv p{margin:0 0 20px;color:var(--ink2);line-height:1.55}
+.iv-next{text-align:left;background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:14px 16px;box-shadow:var(--shadow)}
+.iv-next small{display:block;font-size:12px;font-weight:800;color:var(--pumpkin-d);margin-bottom:4px}
+.iv-next b{display:block;font-size:16px;line-height:1.4;word-break:keep-all}
+.iv-bar{height:6px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:12px}
+.iv-bar i{display:block;width:100%;height:100%;background:var(--pumpkin-d);border-radius:99px;transform-origin:left;animation:ivfill 3s linear both}
+@keyframes ivfill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 #confetti{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:70;display:none}
 
 /* Toast */
@@ -289,17 +362,22 @@ const ERRORS = {
   MESSAGE_EMPTY: '메시지를 입력해주세요',
   MESSAGE_TOO_LONG: '메시지는 200자까지 보낼 수 있어요',
   TOO_FAST: '메시지를 너무 빨리 보내고 있어요. 잠시 후 다시 보내주세요',
+  NO_QUESTIONS: '시작할 질문이 없어요. 질문을 먼저 추가해주세요',
 };
 
 /* ================= State ================= */
 let session = null; // { token, participant_id, room_id, code }
-const S = { room: null, participants: [], questions: [], online: new Set(), myVotes: {}, results: new Map() };
+const S = { room: null, participants: [], questions: [], online: new Set(), myVotes: {}, results: new Map(), pending: null };
 let channel = null;
 let firstLoad = true;
 let seenRevealed = new Set();
 let lastOpenSeen = null;
 let pollTimer = null;
 let sheetKind = null;
+let hostTab = 'q';        // 진행 관리 시트의 탭: q(질문) | p(참가자)
+let panelToBottom = false; // 질문을 추가한 뒤 목록을 맨 아래로
+let stageHTML = '';
+let ovTimer = null;
 let soundOn = lsGet(LS_SOUND) !== 'off';
 // msgs: 서버에 저장된 메시지(id 오름차순), pending: 전송 중인 내 메시지
 const chat = { msgs: [], pending: [], lastRead: 0, hasRead: false, loaded: false, shownMax: 0 };
@@ -337,6 +415,21 @@ const me = () => S.participants.find((p) => p.id === session?.participant_id);
 const currentQuestion = () => (S.room?.current_question_id ? S.questions.find((q) => q.id === S.room.current_question_id) : null);
 const shareUrl = () => location.origin + location.pathname + '?code=' + (session?.code || '');
 const vibrate = (p) => { try { navigator.vibrate && navigator.vibrate(p); } catch {} };
+
+/* ================= Icons ================= */
+const svg = (d, s = 20, w = 2) => `<svg aria-hidden="true" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const ICON = Object.fromEntries(Object.entries({
+  list: '<path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/>',
+  play: '<path d="M7 5l12 7-12 7z"/>',
+  skip: '<path d="M5 5l9 7-9 7z"/><path d="M19 5v14"/>',
+  trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0V4z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 20h8"/>',
+  chevR: '<path d="M9 6l6 6-6 6"/>',
+  chevL: '<path d="M15 6l-6 6 6 6"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  check: '<path d="M5 12l5 5 9-10"/>',
+  trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+}).map(([k, d]) => [k, (s, w) => svg(d, s, w)]));
 
 /* ================= Audio ================= */
 let actx = null, noiseBuf = null;
@@ -425,6 +518,8 @@ function confetti() {
 }
 function playReveal(q) {
   const ov = $('#overlay');
+  clearTimeout(ovTimer);
+  ov.classList.remove('light');
   ov.innerHTML = `<div class="rv"><div class="rv-q">${esc(q.text)}</div><div class="drum">🥁</div><div class="rv-t display">두구두구두구…</div></div>`;
   ov.hidden = false;
   requestAnimationFrame(() => ov.classList.add('show'));
@@ -435,6 +530,27 @@ function playReveal(q) {
     setTimeout(() => { ov.hidden = true; ov.innerHTML = ''; }, 260);
     confetti(); playTada(); vibrate(150);
   }, 2700);
+}
+
+// 한 질문의 투표가 끝나고 다음으로 넘어갈 때 잠깐 보여주는 화면
+function playInterlude(prev, next) {
+  const ov = $('#overlay');
+  const all = prev.vote_count >= S.participants.length;
+  const box = next
+    ? `<small>다음 질문 · Q${S.questions.findIndex((x) => x.id === next.id) + 1}</small><b>${esc(next.text)}</b>`
+    : `<small>모든 질문 완료</small><b>이제 결과 발표만 남았어요</b>`;
+  ov.innerHTML = `<div class="iv"><div class="iv-ic">${ICON.check(34, 2.6)}</div>
+    <h2 class="display">${all ? '모두 투표 완료!' : '투표 종료!'}</h2>
+    <p>결과는 모든 질문이 끝난 뒤<br>한꺼번에 공개돼요</p>
+    <div class="iv-next">${box}<div class="iv-bar"><i></i></div></div></div>`;
+  ov.classList.add('light');
+  ov.hidden = false;
+  requestAnimationFrame(() => ov.classList.add('show'));
+  clearTimeout(ovTimer);
+  ovTimer = setTimeout(() => {
+    ov.classList.remove('show');
+    ovTimer = setTimeout(() => { ov.hidden = true; ov.innerHTML = ''; ov.classList.remove('light'); }, 260);
+  }, 3000);
 }
 
 /* ================= Home ================= */
@@ -539,6 +655,7 @@ async function enterRoom() {
   firstLoad = true; seenRevealed = new Set(); lastOpenSeen = null;
   Object.assign(S, { room: null, participants: [], questions: [], online: new Set(), myVotes: {}, results: new Map() });
   resetChat();
+  S.pending = null; stageHTML = '';
   $('#app').innerHTML = `<div class="wrap"><header class="top" id="hdr"></header><main id="stage"><div class="card center" style="padding:40px">불러오는 중… 🦃</div></main></div>`;
   await refresh();
   if (!session) return;
@@ -579,6 +696,11 @@ async function refresh() {
     if (cur && cur.status === 'open') {
       S.myVotes[cur.id] = await rpc('my_vote', { p_token: session.token, p_question_id: cur.id });
     }
+    let pending = null;
+    if (cur && cur.status === 'open' && isHost()) {
+      try { pending = new Set(await rpc('host_pending_voters', { p_token: session.token })); } catch (e) { console.error(e); }
+    }
+    S.pending = pending;
     if (S.questions.some((x) => x.status === 'revealed')) {
       const rows = await rpc('get_revealed_results', { p_room_id: rid });
       const m = new Map();
@@ -635,16 +757,20 @@ function render() {
   if (sheetKind === 'menu') renderMenu();
   if (sheetKind === 'chat') renderChatList();
 
-  const cur = currentQuestion();
-  if (cur && S.room.phase === 'question') {
-    if (cur.status === 'open' && cur.id !== lastOpenSeen) {
-      lastOpenSeen = cur.id;
-      if (!firstLoad) { vibrate(80); playBlip(); $('#stage .q-text')?.classList.add('q-enter'); }
+  const cur = currentQuestion(), ph = S.room.phase;
+  const openId = ph === 'question' && cur && cur.status === 'open' ? cur.id : null;
+  if (openId !== lastOpenSeen) {
+    const prev = lastOpenSeen && S.questions.find((q) => q.id === lastOpenSeen);
+    if (!firstLoad) {
+      // 보던 질문이 끝나고 다음 질문(또는 투표 종료)으로 넘어간 경우
+      if (prev && prev.status === 'closed' && (openId || ph === 'finished')) playInterlude(prev, openId ? cur : null);
+      if (openId) { vibrate(80); playBlip(); $('#stage .q-text')?.classList.add('q-enter'); }
     }
-    if (cur.status === 'revealed' && !seenRevealed.has(cur.id)) {
-      seenRevealed.add(cur.id);
-      if (!firstLoad) playReveal(cur);
-    }
+    lastOpenSeen = openId;
+  }
+  if (cur && cur.status === 'revealed' && (ph === 'question' || ph === 'results') && !seenRevealed.has(cur.id)) {
+    seenRevealed.add(cur.id);
+    if (!firstLoad) playReveal(cur);
   }
 }
 function renderHeader() {
@@ -666,33 +792,76 @@ function renderHeader() {
 }
 function renderStage() {
   const st = $('#stage'); if (!st) return;
-  const cur = currentQuestion();
-  if (S.room.phase === 'summary') st.innerHTML = summaryHTML();
-  else if (S.room.phase === 'question' && cur) st.innerHTML = questionHTML(cur);
-  else st.innerHTML = lobbyHTML();
+  const cur = currentQuestion(), ph = S.room.phase;
+  let html;
+  if (ph === 'summary') html = summaryHTML();
+  else if (ph === 'finished') html = finishedHTML();
+  else if ((ph === 'question' || ph === 'results') && cur) html = questionHTML(cur);
+  else html = lobbyHTML();
+  if (html === stageHTML) return; // 내용이 같으면 다시 그리지 않음 (입력 중인 글자 보호)
+  const inp = $('#lobby-q');
+  const keep = inp && { v: inp.value, f: document.activeElement === inp };
+  st.innerHTML = stageHTML = html;
+  const now = $('#lobby-q');
+  if (keep && now) { now.value = keep.v; if (keep.f) now.focus(); }
 }
 function personChip(p) {
   const on = S.online.has(p.id);
   const crown = p.id === S.room.host_participant_id ? ' 👑' : '';
   return `<span class="person"><i class="dot ${on ? '' : 'off'}"></i><span class="e">${esc(p.emoji)}</span>${esc(p.nickname)}${crown}</span>`;
 }
+const missingSamples = () => {
+  const have = new Set(S.questions.map((q) => q.text));
+  return SAMPLE_QUESTIONS.filter((t) => !have.has(t));
+};
 function lobbyHTML() {
-  const hasQ = S.questions.length > 0;
-  const msg = isHost()
-    ? (hasQ ? '준비되면 아래 <b>시작</b> 버튼을 눌러주세요' : '아래 <b>⚙️ 진행</b>에서 질문을 추가해주세요')
-    : '호스트가 질문을 열면 화면이 자동으로 바뀌어요';
-  return `
+  const n = S.participants.length;
+  const chips = `<div class="people">${S.participants.map(personChip).join('')}</div>`;
+  if (!isHost()) {
+    return `
     <div class="card center lobby">
       <div class="big-emoji bob">🍂</div>
       <h2 class="display">곧 시작해요!</h2>
-      <p>${msg}</p>
+      <p>호스트가 시작하면 화면이 자동으로 바뀌어요</p>
       <div class="row" style="justify-content:center;margin-top:16px"><button class="btn ghost sm" style="flex:0 0 auto" data-action="share">🔗 친구 초대하기</button></div>
     </div>
-    <div class="sec"><span>참가자 ${S.participants.length}명</span></div>
-    <div class="people">${S.participants.map(personChip).join('')}</div>`;
+    <div class="sec"><span>참가자 ${n}명</span></div>${chips}`;
+  }
+  // 호스트: 대기실에서 바로 질문을 준비
+  const people = `<div class="sec"><span>참가자 ${n}명</span><button class="btn ghost sm" data-action="share">${ICON.link(18)}친구 초대</button></div>${chips}`;
+  const drafts = S.questions.filter((q) => q.status === 'draft');
+  const started = S.questions.length > drafts.length;
+  if (!drafts.length) {
+    const samples = missingSamples().length;
+    return `
+    <div class="card setup">
+      <div class="ic-badge">${ICON.list(22)}</div>
+      <h2 class="display">${started ? '다음 판 질문을 추가해요' : '질문을 먼저 만들어요'}</h2>
+      <p>투표할 질문이 1개 이상 있어야 시작할 수 있어요. 진행 중에도 언제든 더 추가할 수 있어요.</p>
+      <form data-form="add-q" autocomplete="off">
+        <label class="f" for="lobby-q">질문 추가</label>
+        <div class="add-row">
+          <input id="lobby-q" maxlength="200" placeholder="예: 노래방 마이크 안 놓는 사람은?" enterkeyhint="done" autocomplete="off">
+          <button class="btn" type="submit">추가</button>
+        </div>
+      </form>
+      ${samples ? `<button class="btn ghost block" data-action="sample-questions">${ICON.plus(18)}예시 질문 ${samples}개 한 번에 넣기</button>` : ''}
+    </div>${people}`;
+  }
+  const no = (q) => S.questions.findIndex((x) => x.id === q.id) + 1;
+  return `
+    <div class="card ready">
+      <div class="ready-h"><h2 class="display">질문 ${drafts.length}개</h2><span class="pill open">${ICON.check(14, 3)}준비 완료</span></div>
+      <ol class="q-preview">${drafts.slice(0, 3).map((q) => `<li><b>Q${no(q)}</b><span>${esc(q.text)}</span></li>`).join('')}</ol>
+      ${drafts.length > 3 ? `<div class="more">외 ${drafts.length - 3}개</div>` : ''}
+      <div class="row">
+        <button class="btn ghost sm" data-action="host-panel" data-focus="1">${ICON.plus(18)}질문 추가</button>
+        <button class="btn ghost sm" data-action="host-panel">전체 보기 · 편집</button>
+      </div>
+    </div>${people}`;
 }
-function statusPill(s) {
-  const label = { draft: '대기', open: '투표 중', closed: '마감', revealed: '공개됨' }[s];
+function statusPill(s, inList) {
+  const label = { draft: '대기', open: '투표 중', closed: '투표 완료', revealed: inList ? '발표 완료' : '결과 발표' }[s];
   return `<span class="pill ${s}">${label}</span>`;
 }
 function questionHTML(q) {
@@ -718,19 +887,30 @@ function questionHTML(q) {
         <span class="pick-emoji">${esc(p.emoji)}</span>
         <span class="pick-name">${esc(p.nickname)}</span>
       </button>`).join('');
-    const hint = mine ? '✅ 투표 완료! 마감 전까지 바꿀 수 있어요' : '👆 한 명을 골라주세요';
+    const hint = mine ? '✅ 투표 완료! 모두 투표하면 자동으로 넘어가요' : '👆 한 명을 골라주세요';
     return head + progress + `<div class="picks">${picks}</div><div class="vote-hint">${hint}</div>`;
   }
   if (q.status === 'closed') {
     return head + progress + `
       <div class="card center wait">
         <div class="big-emoji bob">🥁</div>
-        <h2 class="display">투표 마감!</h2>
-        <p>곧 결과가 공개돼요. 두근두근…</p>
+        <h2 class="display">투표 완료!</h2>
+        <p>결과는 모든 질문이 끝난 뒤 공개돼요</p>
       </div>`;
   }
   if (q.status === 'revealed') return head + resultsHTML(q);
   return head;
+}
+function finishedHTML() {
+  const closed = S.questions.filter((q) => q.status === 'closed');
+  const no = (q) => S.questions.findIndex((x) => x.id === q.id) + 1;
+  return `
+    <div class="card center wait">
+      <div class="ic-round">${ICON.trophy(28)}</div>
+      <h2 class="display">투표가 모두 끝났어요!</h2>
+      <p>${isHost() ? '이제 순서대로 결과를 공개해요.' : '호스트가 결과 발표를 시작하면<br>순서대로 공개돼요.'}</p>
+    </div>
+    ${closed.length ? `<ol class="card q-secret">${closed.map((q) => `<li><b>Q${no(q)}</b><span>${esc(q.text)}</span><i aria-label="결과 미공개">?</i></li>`).join('')}</ol>` : ''}`;
 }
 function tallyFor(qid) {
   const m = S.results.get(qid) || new Map();
@@ -810,29 +990,61 @@ function nextDraft() {
   if (cur) { const after = drafts.find((q) => q.sort_order > cur.sort_order); if (after) return after; }
   return drafts[0];
 }
-function nextButton() {
-  const n = nextDraft();
-  const started = S.questions.some((q) => q.status !== 'draft');
-  if (n) return `<button class="btn" data-action="host-status" data-q="${n.id}" data-s="open">${started ? '다음 질문 ▶' : '시작하기 ▶'}</button>`;
-  if (S.questions.some((q) => q.status === 'revealed')) return `<button class="btn cran" data-action="host-phase" data-p="summary">🏆 최종 결과 보기</button>`;
-  return `<button class="btn" data-action="host-panel">+ 질문 추가</button>`;
+// 호스트 전용 진행 카드: 지금 할 일 하나만 큰 버튼으로 보여준다
+function hostCardHTML() {
+  const cur = currentQuestion(), ph = S.room.phase, n = S.participants.length;
+  const qno = (q) => S.questions.findIndex((x) => x.id === q.id) + 1;
+  const label = (q) => `Q${qno(q)}. ${esc(q.text)}`;
+  const side = (action, icon, text, off) => `<button class="hc-side" data-action="${action}"${off ? ' disabled' : ''}>${icon}${text}</button>`;
+  const main = (o) => `<button class="hc-main${o.ghost ? ' ghost' : ''}"${o.action ? ` data-action="${o.action}"` : ' disabled'}${o.attrs || ''}>${o.icon || ''}<span class="t"><b>${o.title}</b><small>${o.sub}</small></span>${o.action && !o.ghost ? ICON.chevR(18, 2.4) : ''}</button>`;
+  const list = side('host-panel', ICON.list(20), '질문 목록');
+  const next = nextDraft();
+  const done = S.questions.filter((q) => q.status === 'closed' || q.status === 'revealed'); // 투표가 끝난 질문 (발표 순서)
+  const unrevealed = done.filter((q) => q.status === 'closed');
+  let top, body = '', row, extra = '';
+
+  if (ph === 'question' && cur && cur.status === 'open') {
+    const left = Math.max(0, n - cur.vote_count);
+    top = `<span class="auto"><i></i>자동 진행 중</span>`;
+    body = `<p class="hc-text">${n}명이 모두 투표하면 ${next ? '다음 질문으로 자동으로 넘어가요' : '투표가 끝나고 결과 발표를 시작할 수 있어요'}.</p>`;
+    const pend = S.pending ? S.participants.filter((p) => S.pending.has(p.id)) : [];
+    if (pend.length) {
+      body += `<div class="hc-wait">아직 투표 안 함${pend.slice(0, 6).map((p) => `<span>${esc(p.emoji)} ${esc(p.nickname)}</span>`).join('')}${pend.length > 6 ? `<span>+${pend.length - 6}</span>` : ''}</div>`;
+    }
+    row = list + main({ ghost: true, action: 'host-skip', icon: ICON.skip(22), title: '기다리지 않고 넘기기', sub: left ? `안 한 ${left}명은 이 질문을 건너뛰어요` : '바로 다음으로 넘어가요' });
+  } else if (ph === 'results') {
+    const i = cur ? done.findIndex((q) => q.id === cur.id) : -1;
+    const nx = done[i + 1];
+    const dots = done.length <= 12 ? `<span class="hc-dots" aria-hidden="true">${done.map((_, k) => `<i${k <= i ? ' class="on"' : ''}></i>`).join('')}</span>` : '';
+    top = `<span><b>결과 발표 ${i + 1} / ${done.length}</b>${dots}</span>`;
+    row = side('host-prev-result', ICON.chevL(20, 2.2), '이전 결과', i <= 0)
+      + (nx ? main({ action: 'host-next-result', title: '다음 결과 공개', sub: label(nx) })
+            : main({ action: 'host-next-result', icon: ICON.trophy(22), title: '최종 순위 보기', sub: '모든 결과를 모아서 보여줘요' }));
+  } else if (ph === 'summary') {
+    top = `<b>최종 결과</b>`;
+    row = side('host-prev-result', ICON.chevL(20, 2.2), '결과 다시', !done.some((q) => q.status === 'revealed'))
+      + main({ ghost: true, action: 'host-phase', attrs: ' data-p="lobby"', title: '대기실로 돌아가기', sub: '질문을 추가해 한 판 더 할 수 있어요' });
+  } else {
+    const started = S.questions.some((q) => q.status !== 'draft');
+    top = ph === 'finished'
+      ? `<b>투표 종료 · 질문 ${unrevealed.length}개 · ${n}명 참여</b>`
+      : `<b>${started ? '쉬는 중' : '시작 전'} · 질문 ${S.questions.length}개 · ${n}명 입장</b>`;
+    if (next) {
+      row = list + main({ action: 'host-start', icon: ICON.play(22), title: ph === 'finished' ? '추가 질문 시작' : started ? '다음 질문 시작' : '첫 질문 시작', sub: label(next) });
+      if (unrevealed.length) extra = `<button class="hc-link" data-action="host-next-result">남은 질문 없이 결과 발표 시작</button>`;
+    } else if (unrevealed.length) {
+      row = list + main({ action: 'host-next-result', icon: ICON.play(22), title: '결과 발표 시작', sub: `Q${qno(unrevealed[0])}부터 하나씩 공개해요` });
+    } else {
+      row = list + main({ icon: ICON.play(22), title: started ? '다음 질문 시작' : '첫 질문 시작', sub: '질문을 추가하면 시작할 수 있어요' });
+    }
+  }
+  return `<div class="hostcard"><div class="hc-top">${top}<small>호스트 전용</small></div>${body}<div class="hc-row">${row}</div>${extra}</div>`;
 }
 function renderDock() {
   const reacts = `<div class="reacts">${REACTS.map((e) => `<button data-action="react" data-e="${e}" aria-label="반응 ${e}">${e}</button>`).join('')}</div>`;
-  let host = '';
-  if (isHost()) {
-    const cur = currentQuestion();
-    let main;
-    if (S.room.phase === 'question' && cur) {
-      if (cur.status === 'open') main = `<button class="btn ghost" data-action="host-status" data-q="${cur.id}" data-s="closed">🔒 마감</button><button class="btn" data-action="host-status" data-q="${cur.id}" data-s="revealed">🥁 공개</button>`;
-      else if (cur.status === 'closed') main = `<button class="btn ghost" data-action="host-status" data-q="${cur.id}" data-s="open">다시 열기</button><button class="btn" data-action="host-status" data-q="${cur.id}" data-s="revealed">🥁 결과 공개</button>`;
-      else main = nextButton();
-    } else if (S.room.phase === 'summary') {
-      main = `<button class="btn ghost" data-action="host-phase" data-p="lobby">대기실로</button>`;
-    } else main = nextButton();
-    host = `<div class="hostbar"><button class="btn dark" data-action="host-panel">⚙️ 진행</button>${main}</div>`;
-  }
-  $('#dock').innerHTML = `<div class="dock-in">${reacts}${host}</div>`;
+  $('#dock').innerHTML = `<div class="dock-in">${reacts}${isHost() ? hostCardHTML() : ''}</div>`;
+  const wrap = $('#app .wrap'); // 고정된 하단 바가 내용을 가리지 않도록
+  if (wrap) wrap.style.paddingBottom = $('#dock').offsetHeight + 24 + 'px';
 }
 
 /* ================= Sheets ================= */
@@ -840,6 +1052,7 @@ function openSheet(kind, html) {
   sheetKind = kind;
   const sh = $('#sheet'), sc = $('#scrim');
   sh.classList.toggle('chat', kind === 'chat');
+  sh.classList.toggle('panel', kind === 'host');
   sh.style.height = sh.style.bottom = '';
   sh.innerHTML = `<div class="grab"></div>` + html;
   sh.hidden = false; sc.hidden = false;
@@ -854,56 +1067,80 @@ function closeSheet() {
   setTimeout(() => {
     if (sheetKind) return;
     sh.hidden = true; sc.hidden = true; sh.innerHTML = '';
-    sh.classList.remove('chat'); sh.style.height = sh.style.bottom = '';
+    sh.classList.remove('chat', 'panel'); sh.style.height = sh.style.bottom = '';
   }, 280);
 }
 $('#scrim').addEventListener('click', closeSheet);
 
-function openHostPanel() {
+function openHostPanel(el) {
+  hostTab = el?.dataset?.tab || 'q';
   openSheet('host', `
     <div class="sheet-h"><h3 class="display">진행 관리</h3><button class="icon-btn" data-action="close-sheet" aria-label="닫기">✕</button></div>
-    <section>
-      <h4>질문 추가</h4>
-      <textarea id="q-input" rows="3" placeholder="한 줄에 질문 하나씩 입력하세요&#10;예: 학창시절 껌 좀 씹어본 사람은?"></textarea>
-      <div class="row">
-        <button class="btn ghost sm" data-action="sample-questions">💡 예시 넣기</button>
-        <button class="btn sm" data-action="add-questions">추가하기</button>
+    <div class="seg" id="host-tabs"></div>
+    <div id="host-list" class="panel-list"></div>
+    <form id="host-add" class="panel-add" data-form="add-q" autocomplete="off">
+      <div class="lbl"><label for="q-input">질문 추가</label><button type="button" class="mini" id="sample-btn" data-action="sample-questions">${ICON.plus(16, 2.2)}예시 질문 넣기</button></div>
+      <div class="add-row">
+        <input id="q-input" maxlength="200" placeholder="새 질문을 입력하세요" enterkeyhint="done" autocomplete="off">
+        <button class="btn" type="submit">추가</button>
       </div>
-    </section>
-    <section><h4>질문 목록</h4><div id="host-qlist"></div></section>
-    <section>
-      <h4>화면 전환</h4>
-      <div class="row">
-        <button class="btn ghost sm" data-action="host-phase" data-p="lobby">🍂 대기실</button>
-        <button class="btn ghost sm" data-action="host-phase" data-p="summary">🏆 최종 결과</button>
-      </div>
-    </section>
-    <section><h4>참가자</h4><div id="host-plist"></div></section>`);
+    </form>`);
   renderHostLists();
+  fitSheet();
+  if (el?.dataset?.focus) setTimeout(() => $('#q-input')?.focus(), 320);
 }
 function renderHostLists() {
-  const ql = $('#host-qlist'), pl = $('#host-plist');
-  if (!ql || !pl) return;
-  const curId = S.room.current_question_id;
-  ql.innerHTML = S.questions.length ? S.questions.map((q, i) => {
-    const a = [];
-    if (q.status === 'draft' || q.status === 'closed') a.push(`<button class="btn xs" data-action="host-status" data-q="${q.id}" data-s="open">${q.status === 'draft' ? '열기' : '다시 열기'}</button>`);
-    if (q.status === 'open') a.push(`<button class="btn ghost xs" data-action="host-status" data-q="${q.id}" data-s="closed">마감</button>`);
-    if (q.status === 'open' || q.status === 'closed') a.push(`<button class="btn xs" data-action="host-status" data-q="${q.id}" data-s="revealed">공개</button>`);
-    if (q.status !== 'open') a.push(`<button class="btn danger xs" data-action="host-delete-q" data-q="${q.id}" aria-label="삭제">✕</button>`);
+  const tabs = $('#host-tabs'), list = $('#host-list'), add = $('#host-add');
+  if (!tabs || !list || !add) return;
+  const n = S.participants.length;
+  tabs.innerHTML = [['q', `질문 ${S.questions.length}`], ['p', `참가자 ${n}`]].map(([k, t]) =>
+    `<button type="button" data-action="host-tab" data-tab="${k}" class="${hostTab === k ? 'on' : ''}" aria-pressed="${hostTab === k}">${t}</button>`).join('');
+  add.hidden = hostTab !== 'q';
+  $('#sample-btn').hidden = !missingSamples().length;
+  if (hostTab === 'p') {
+    list.innerHTML = S.participants.map((p) => `
+      <div class="list-item">
+        <i class="dot ${S.online.has(p.id) ? '' : 'off'}"></i>
+        <div class="grow"><div class="t">${esc(p.emoji)} ${esc(p.nickname)}${p.id === S.room.host_participant_id ? ' 👑' : ''}</div></div>
+        ${p.id !== S.room.host_participant_id ? `<div class="acts"><button class="btn danger xs" data-action="host-remove-p" data-id="${p.id}">내보내기</button></div>` : ''}
+      </div>`).join('');
+    return;
+  }
+  const next = nextDraft();
+  list.innerHTML = S.questions.length ? S.questions.map((q, i) => {
+    const meta = q.status === 'open' ? `${q.vote_count}/${n}명 투표`
+      : q.status === 'closed' ? '결과는 마지막에 공개'
+      : next && q.id === next.id ? '다음 차례' : '';
+    const del = q.status === 'draft'
+      ? `<div class="acts"><button class="row-del" data-action="host-delete-q" data-q="${q.id}" aria-label="Q${i + 1} 삭제">${ICON.trash(18)}</button></div>` : '';
     return `
-      <div class="list-item ${q.id === curId && S.room.phase === 'question' ? 'cur' : ''}">
+      <div class="list-item ${q.status === 'open' ? 'cur' : ''}">
         <span class="num">Q${i + 1}</span>
-        <div class="grow"><div class="t">${esc(q.text)}</div><div style="margin-top:5px">${statusPill(q.status)}${q.status !== 'draft' ? ` <span class="hint" style="margin-left:4px">${q.vote_count}표</span>` : ''}</div></div>
-        <div class="acts">${a.join('')}</div>
+        <div class="grow"><div class="t">${esc(q.text)}</div><div class="q-meta">${statusPill(q.status, true)}${meta ? `<span class="hint">${meta}</span>` : ''}</div></div>
+        ${del}
       </div>`;
-  }).join('') : `<div class="empty">아직 질문이 없어요</div>`;
-  pl.innerHTML = S.participants.map((p) => `
-    <div class="list-item">
-      <i class="dot ${S.online.has(p.id) ? '' : 'off'}"></i>
-      <div class="grow"><div class="t">${esc(p.emoji)} ${esc(p.nickname)}${p.id === S.room.host_participant_id ? ' 👑' : ''}</div></div>
-      ${p.id !== S.room.host_participant_id ? `<div class="acts"><button class="btn danger xs" data-action="host-remove-p" data-id="${p.id}">내보내기</button></div>` : ''}
-    </div>`).join('');
+  }).join('') : `<div class="empty">아직 질문이 없어요. 아래에서 추가해 주세요.</div>`;
+  if (panelToBottom) { panelToBottom = false; list.scrollTop = list.scrollHeight; }
+}
+async function addQuestion(form) {
+  const inp = form.querySelector('input'), btn = form.querySelector('button[type=submit]');
+  const text = inp.value.trim();
+  if (!text) return toast('질문을 입력해주세요');
+  btn.disabled = true;
+  try {
+    await rpc('host_add_questions', { p_token: session.token, p_texts: [text] });
+    inp.value = '';
+    if (document.contains(inp)) inp.focus();
+    toast('질문을 추가했어요');
+    panelToBottom = true;
+    scheduleRefresh();
+  } catch (err) { toast(errMsg(err)); }
+  finally { btn.disabled = false; }
+}
+async function hostRpc(el, name) {
+  el.disabled = true; // 다음 화면이 그려질 때까지 중복 탭 방지
+  try { await rpc(name, { p_token: session.token }); scheduleRefresh(); }
+  catch (err) { el.disabled = false; toast(errMsg(err)); scheduleRefresh(); }
 }
 function openMenu() { openSheet('menu', '<div id="menu-body"></div>'); renderMenu(); }
 function renderMenu() {
@@ -914,7 +1151,7 @@ function renderMenu() {
     <section style="margin-top:8px">
       <button class="menu-btn" data-action="share"><span>🔗</span>친구 초대 (QR · 링크)</button>
       <button class="menu-btn" data-action="toggle-sound"><span>${soundOn ? '🔊' : '🔇'}</span>효과음 ${soundOn ? '켜짐' : '꺼짐'}</button>
-      ${isHost() ? '' : '<button class="menu-btn" data-action="claim-host"><span>👑</span>호스트 권한 가져오기</button>'}
+      ${isHost() ? '<button class="menu-btn" data-action="host-panel"><span>🗂️</span>진행 관리 (질문 · 참가자)</button>' : '<button class="menu-btn" data-action="claim-host"><span>👑</span>호스트 권한 가져오기</button>'}
       <button class="menu-btn" data-action="leave" style="color:var(--cran)"><span>🚪</span>이 기기에서 방 나가기</button>
     </section>`;
 }
@@ -1069,7 +1306,7 @@ function openChat() {
   const keep = (e) => e.preventDefault();
   $('#chat-form .btn').addEventListener('pointerdown', keep);
   $('#chat-form .btn').addEventListener('mousedown', keep);
-  fitChat();
+  fitSheet();
   if (!chat.loaded) syncChat(true);
   if (matchMedia('(pointer:fine)').matches) setTimeout(() => $('#chat-input')?.focus(), 300);
 }
@@ -1097,10 +1334,10 @@ async function sendChat() {
   }
   chatChanged(true);
 }
-// 모바일 키보드가 올라오면 시트를 키보드 위로 올리고 높이를 보이는 영역에 맞춤
-function fitChat() {
+// 모바일 키보드가 올라오면 시트를 키보드 위로 올리고 높이를 보이는 영역에 맞춤 (입력창이 있는 채팅·진행 관리 시트)
+function fitSheet() {
   const vv = window.visualViewport;
-  if (sheetKind !== 'chat' || !vv || vv.scale > 1.01) return;
+  if ((sheetKind !== 'chat' && sheetKind !== 'host') || !vv || vv.scale > 1.01) return;
   const sh = $('#sheet'), box = $('#chat-list');
   const stick = box && box.scrollHeight - box.scrollTop - box.clientHeight < 80;
   const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
@@ -1109,8 +1346,8 @@ function fitChat() {
   if (stick) box.scrollTop = box.scrollHeight;
 }
 if (window.visualViewport) {
-  visualViewport.addEventListener('resize', fitChat);
-  visualViewport.addEventListener('scroll', fitChat);
+  visualViewport.addEventListener('resize', fitSheet);
+  visualViewport.addEventListener('scroll', fitSheet);
 }
 
 /* ================= Actions ================= */
@@ -1183,12 +1420,16 @@ const actions = {
     lsDel(LS_SESSION); session = null;
     renderHome(code);
   },
-  async 'host-status'(el) {
-    el.disabled = true;
-    try { await rpc('host_set_status', { p_token: session.token, p_question_id: el.dataset.q, p_status: el.dataset.s }); scheduleRefresh(); }
-    catch (err) { toast(errMsg(err)); }
-    finally { el.disabled = false; }
+  'host-tab'(el) { hostTab = el.dataset.tab; renderHostLists(); },
+  'host-start'(el) { return hostRpc(el, 'host_start'); },
+  'host-skip'(el) {
+    const cur = currentQuestion();
+    const left = cur ? Math.max(0, S.participants.length - cur.vote_count) : 0;
+    if (left && !confirm(`아직 ${left}명이 투표하지 않았어요.\n기다리지 않고 넘어갈까요?`)) return;
+    return hostRpc(el, 'host_skip');
   },
+  'host-next-result'(el) { return hostRpc(el, 'host_results_next'); },
+  'host-prev-result'(el) { return hostRpc(el, 'host_results_prev'); },
   async 'host-phase'(el) {
     if (el.dataset.p === 'summary' && S.questions.some((q) => q.status === 'open') && !confirm('진행 중인 투표를 마감하고 최종 결과로 넘어갈까요?')) return;
     try { await rpc('host_set_phase', { p_token: session.token, p_phase: el.dataset.p }); if (sheetKind === 'host') closeSheet(); scheduleRefresh(); }
@@ -1206,21 +1447,15 @@ const actions = {
     try { await rpc('host_remove_participant', { p_token: session.token, p_participant_id: p.id }); scheduleRefresh(); }
     catch (err) { toast(errMsg(err)); }
   },
-  'sample-questions'() {
-    const ta = $('#q-input'); if (!ta) return;
-    const existing = new Set(S.questions.map((q) => q.text));
-    const add = SAMPLE_QUESTIONS.filter((t) => !existing.has(t));
-    ta.value = (ta.value.trim() ? ta.value.trim() + '\n' : '') + add.join('\n');
-    ta.focus();
-  },
-  async 'add-questions'(el) {
-    const ta = $('#q-input');
-    const lines = ta.value.split('\n').map((s) => s.trim()).filter(Boolean);
-    if (!lines.length) return toast('질문을 입력해주세요');
+  async 'sample-questions'(el) {
+    const add = missingSamples();
+    if (!add.length) return toast('예시 질문이 이미 모두 들어 있어요');
     el.disabled = true;
     try {
-      await rpc('host_add_questions', { p_token: session.token, p_texts: lines });
-      ta.value = ''; toast(`질문 ${lines.length}개를 추가했어요`); scheduleRefresh();
+      await rpc('host_add_questions', { p_token: session.token, p_texts: add });
+      toast(`예시 질문 ${add.length}개를 추가했어요`);
+      panelToBottom = true;
+      scheduleRefresh();
     } catch (err) { toast(errMsg(err)); }
     finally { el.disabled = false; }
   },
@@ -1230,6 +1465,11 @@ document.addEventListener('click', (e) => {
   if (!el) return;
   const fn = actions[el.dataset.action];
   if (fn) { e.preventDefault(); fn(el, e); }
+});
+
+document.addEventListener('submit', (e) => {
+  const f = e.target.closest('[data-form="add-q"]');
+  if (f) { e.preventDefault(); addQuestion(f); }
 });
 
 /* ================= Boot ================= */
