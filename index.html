@@ -64,6 +64,7 @@ label.f{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:16
 .seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(43,26,16,.12)}
 .emoji-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
 .emoji-grid button{display:grid;place-items:center;aspect-ratio:1;border-radius:10px;font-size:22px;background:var(--bg);border:1.5px solid transparent;transition:transform .1s}
+.emoji-grid button:disabled{opacity:.28;filter:grayscale(1);cursor:not-allowed}
 .emoji-grid button.on{border-color:var(--pumpkin);background:var(--pumpkin-l);transform:scale(1.06)}
 .form-submit{margin-top:22px}
 .gender{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -116,7 +117,6 @@ label.f{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:16
 .pick-name{font-weight:800;font-size:16px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pick.on{border-color:var(--pumpkin);background:var(--pumpkin-l)}
 .pick .check{position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:50%;background:var(--pumpkin);color:#fff;font-size:13px;font-weight:900;display:grid;place-items:center;animation:pop .3s}
-.pick .tag{position:absolute;top:9px;left:9px;font-size:11px;font-weight:800;color:var(--ink3)}
 .vote-hint .ic{color:#4F5C36}
 .vote-hint{text-align:center;color:var(--ink2);font-size:14px;margin-top:14px;font-weight:600}
 .center{text-align:center}
@@ -451,6 +451,8 @@ const ERRORS = {
   QUESTION_NOT_FOUND: '질문을 찾을 수 없어요',
   BAD_TRANSITION: '지금 상태에서는 할 수 없어요',
   CANNOT_REMOVE_HOST: '호스트는 내보낼 수 없어요',
+  SELF_VOTE: '자기 자신에게는 투표할 수 없어요',
+  EMOJI_TAKEN: '이미 다른 사람이 고른 이모지예요. 다른 걸 골라주세요',
   MESSAGE_EMPTY: '메시지를 입력해주세요',
   MESSAGE_TOO_LONG: '메시지는 200자까지 보낼 수 있어요',
   TOO_FAST: '메시지를 너무 빨리 보내고 있어요. 잠시 후 다시 보내주세요',
@@ -510,7 +512,9 @@ const currentQuestion = () => (S.room?.current_question_id ? S.questions.find((q
 const shareUrl = () => location.origin + location.pathname + '?code=' + (session?.code || '');
 // 질문의 후보: 성별이 정해진 질문은 그 성별 참가자만
 const candidatesFor = (q) => (q.target === 'm' || q.target === 'f' ? S.participants.filter((p) => p.gender === q.target) : S.participants);
-const askable = (q) => candidatesFor(q).length > 0;
+// 이 질문에 투표할 수 있는 사람 수: 자기 자신 말고 고를 후보가 있는 참가자 (본인에게는 투표할 수 없음)
+const votersNeeded = (q) => { const c = candidatesFor(q); return S.participants.filter((p) => c.some((x) => x.id !== p.id)).length; };
+const askable = (q) => votersNeeded(q) > 0;
 const targetTag = (q) => (TARGET_LABEL[q.target] ? `<i class="tag-t">${TARGET_LABEL[q.target]}</i>` : '');
 const vibrate = (p) => { try { navigator.vibrate && navigator.vibrate(p); } catch {} };
 
@@ -645,7 +649,7 @@ function playReveal(q) {
 // 한 질문의 투표가 끝나고 다음으로 넘어갈 때 잠깐 보여주는 화면
 function playInterlude(prev, next) {
   const ov = $('#overlay');
-  const all = prev.vote_count >= S.participants.length;
+  const all = prev.vote_count >= votersNeeded(prev);
   const box = next
     ? `<small>다음 질문 · Q${S.questions.findIndex((x) => x.id === next.id) + 1}</small><b>${esc(next.text)}</b>`
     : `<small>모든 질문 완료</small><b>이제 결과 발표만 남았어요</b>`;
@@ -706,6 +710,7 @@ function renderHome(prefillCode, startTab) {
         ${genderPick('j', gender)}
         <label class="f">내 이모지</label>
         ${emojiGrid('j', randomEmoji())}
+        <div class="hint" id="j-taken-hint" hidden>흐린 이모지는 이미 다른 사람이 골랐어요</div>
         <button class="btn block form-submit" type="submit">입장하기</button>
       </form>
       <form id="f-create" ${tab === 'create' ? '' : 'hidden'} autocomplete="off">
@@ -726,6 +731,8 @@ function renderHome(prefillCode, startTab) {
     ${backLink}
   </div>`;
   $('#f-join').addEventListener('submit', onJoin);
+  $('#j-code').addEventListener('input', () => { clearTimeout(takenTimer); takenTimer = setTimeout(refreshTaken, 300); });
+  refreshTaken();
   $('#f-create').addEventListener('submit', onCreate);
 }
 async function onJoin(e) {
@@ -742,7 +749,37 @@ async function onJoin(e) {
     const res = await rpc('join_room', { p_code: code, p_nickname: nick, p_emoji: emoji, p_gender: gender });
     lsSet(LS_NICK, nick); lsSet(LS_GENDER, gender);
     startSession(res);
-  } catch (err) { toast(errMsg(err)); btn.disabled = false; }
+  } catch (err) {
+    toast(errMsg(err)); btn.disabled = false;
+    if (String(err?.message || '').includes('EMOJI_TAKEN')) refreshTaken();
+  }
+}
+// 참가하려는 방에서 이미 쓰이는 이모지는 고를 수 없게 표시한다 (16개가 다 찼을 때만 중복 허용)
+let takenTimer = null;
+async function refreshTaken() {
+  const inp = $('#j-code'), grid = $('[data-group="j"]');
+  if (!inp || !grid) return;
+  const code = inp.value.trim().toUpperCase();
+  const taken = new Set();
+  if (code.length >= 5) {
+    try {
+      const { data: room } = await sb.from('rooms').select('id').eq('code', code).maybeSingle();
+      if (room) {
+        const { data } = await sb.from('participants').select('emoji').eq('room_id', room.id);
+        (data || []).forEach((p) => taken.add(emoKey(p.emoji)));
+      }
+    } catch (e) { console.error(e); }
+    if (!document.contains(grid) || inp.value.trim().toUpperCase() !== code) return; // 그 사이 화면이나 코드가 바뀜
+  }
+  const full = EMOJIS.every((e) => taken.has(emoKey(e)));
+  const free = [];
+  grid.querySelectorAll('button').forEach((b) => {
+    b.disabled = !full && taken.has(emoKey(b.dataset.e));
+    if (!b.disabled) free.push(b);
+  });
+  const cur = grid.querySelector('button.on');
+  if ((!cur || cur.disabled) && free.length) actions['pick-emoji'](free[Math.floor(Math.random() * free.length)]);
+  $('#j-taken-hint').hidden = full || !taken.size;
 }
 async function onCreate(e) {
   e.preventDefault();
@@ -994,7 +1031,7 @@ function statusPill(s, inList) {
 function questionHTML(q) {
   const idx = S.questions.findIndex((x) => x.id === q.id) + 1;
   const total = S.questions.length;
-  const n = S.participants.length;
+  const n = votersNeeded(q);
   const pct = n ? Math.min(100, Math.round((q.vote_count / n) * 100)) : 0;
   const head = `
     <div class="q-head"><span class="q-label">Q${idx} <em>/ ${total}</em>${targetTag(q)}</span>${statusPill(q.status)}</div>
@@ -1007,14 +1044,21 @@ function questionHTML(q) {
 
   if (q.status === 'open') {
     const mine = S.myVotes[q.id];
-    const picks = candidatesFor(q).map((p) => `
+    const picks = candidatesFor(q).filter((p) => p.id !== session.participant_id).map((p) => `
       <button class="pick ${mine === p.id ? 'on' : ''}" data-action="vote" data-id="${p.id}">
-        ${p.id === session.participant_id ? '<span class="tag">나</span>' : ''}
         ${mine === p.id ? `<span class="check">${ICON.check(14, 3.2)}</span>` : ''}
         <span class="pick-emoji">${emo(p.emoji)}</span>
         <span class="pick-name">${esc(p.nickname)}</span>
       </button>`).join('');
-    const hint = mine ? `${ICON.check(16, 3)} 투표 완료! 모두 투표하면 자동으로 넘어가요` : askable(q) ? '한 명을 골라주세요' : '후보가 없어요. 호스트가 넘기면 다음으로 가요';
+    const hint = mine ? `${ICON.check(16, 3)} 투표 완료! 모두 투표하면 자동으로 넘어가요` : '한 명을 골라주세요';
+    if (!picks) { // 고를 사람이 없음: 후보가 나뿐이거나 후보가 아예 없는 경우
+      return head + progress + `
+      <div class="card center wait">
+        <div class="ic-round">${ICON.check(28, 2.6)}</div>
+        <h2 class="display">이번엔 쉬어 가요</h2>
+        <p>${candidatesFor(q).length ? '이 질문의 후보는 나뿐이라 투표하지 않아요.' : '이 질문은 지금 후보가 없어요.'}<br>다른 사람들의 투표를 기다리는 중이에요.</p>
+      </div>`;
+    }
     return head + progress + `<div class="picks">${picks}</div><div class="vote-hint">${hint}</div>`;
   }
   if (q.status === 'closed') {
@@ -1131,9 +1175,9 @@ function hostCardHTML() {
   let top, body = '', row, extra = '';
 
   if (ph === 'question' && cur && cur.status === 'open') {
-    const left = Math.max(0, n - cur.vote_count);
+    const need = votersNeeded(cur), left = Math.max(0, need - cur.vote_count);
     top = `<span class="auto"><i></i>자동 진행 중</span>`;
-    body = `<p class="hc-text">${n}명이 모두 투표하면 ${next ? '다음 질문으로 자동으로 넘어가요' : '투표가 끝나고 결과 발표를 시작할 수 있어요'}.</p>`;
+    body = `<p class="hc-text">${need}명이 모두 투표하면 ${next ? '다음 질문으로 자동으로 넘어가요' : '투표가 끝나고 결과 발표를 시작할 수 있어요'}.</p>`;
     const pend = S.pending ? S.participants.filter((p) => S.pending.has(p.id)) : [];
     if (pend.length) {
       body += `<div class="hc-wait">아직 투표 안 함${pend.slice(0, 6).map((p) => `<span>${emo(p.emoji)} ${esc(p.nickname)}</span>`).join('')}${pend.length > 6 ? `<span>+${pend.length - 6}</span>` : ''}</div>`;
@@ -1162,7 +1206,7 @@ function hostCardHTML() {
     } else if (unrevealed.length) {
       row = list + main({ action: 'host-next-result', icon: ICON.play(22), title: '결과 발표 시작', sub: `Q${qno(unrevealed[0])}부터 하나씩 공개해요` });
     } else {
-      row = list + main({ icon: ICON.play(22), title: started ? '다음 질문 시작' : '첫 질문 시작', sub: S.questions.some((q) => q.status === 'draft') ? '후보가 있는 질문이 없어요' : '질문을 추가하면 시작할 수 있어요' });
+      row = list + main({ icon: ICON.play(22), title: started ? '다음 질문 시작' : '첫 질문 시작', sub: !S.questions.some((q) => q.status === 'draft') ? '질문을 추가하면 시작할 수 있어요' : n < 2 ? '2명 이상 모이면 시작할 수 있어요' : '후보가 있는 질문이 없어요' });
     }
   }
   return `<div class="hostcard"><div class="hc-top">${top}<small>호스트 전용</small></div>${body}<div class="hc-row">${row}</div>${extra}</div>`;
@@ -1236,9 +1280,9 @@ function renderHostLists() {
   }
   const next = nextDraft();
   list.innerHTML = S.questions.length ? S.questions.map((q, i) => {
-    const meta = q.status === 'open' ? `${q.vote_count}/${n}명 투표`
+    const meta = q.status === 'open' ? `${q.vote_count}/${votersNeeded(q)}명 투표`
       : q.status === 'closed' ? '결과는 마지막에 공개'
-      : q.status === 'draft' && !askable(q) ? '후보가 없어 건너뛰어요'
+      : q.status === 'draft' && n >= 2 && !askable(q) ? '후보가 없어 건너뛰어요'
       : next && q.id === next.id ? '다음 차례' : '';
     const del = q.status === 'draft'
       ? `<div class="acts"><button class="row-del" data-action="host-delete-q" data-q="${q.id}" aria-label="Q${i + 1} 삭제">${ICON.trash(18)}</button></div>` : '';
@@ -1566,7 +1610,7 @@ const actions = {
   'host-start'(el) { return hostRpc(el, 'host_start'); },
   'host-skip'(el) {
     const cur = currentQuestion();
-    const left = cur ? Math.max(0, S.participants.length - cur.vote_count) : 0;
+    const left = cur ? Math.max(0, votersNeeded(cur) - cur.vote_count) : 0;
     if (left && !confirm(`아직 ${left}명이 투표하지 않았어요.\n기다리지 않고 넘어갈까요?`)) return;
     return hostRpc(el, 'host_skip');
   },
