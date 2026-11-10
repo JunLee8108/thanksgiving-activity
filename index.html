@@ -178,6 +178,12 @@ label.f{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:16
 .reacts button{flex:1;height:36px;border-radius:12px;background:var(--card);border:1.5px solid var(--line);font-size:20px;display:grid;place-items:center;transition:transform .08s}
 .reacts button:active{transform:scale(.88)}
 .btn svg{flex-shrink:0}
+a.btn{text-decoration:none}
+/* 결과 내보내기 */
+.export-row{margin:0 0 16px}
+.export-img{display:block;width:100%;margin-top:12px;border-radius:14px;border:1.5px solid var(--line)}
+.export-note{text-align:center;margin-top:10px}
+.export-text{min-height:260px;margin-top:10px;font-size:13px}
 
 /* Host card */
 .hostcard{background:var(--card);border:1.5px solid var(--line);border-radius:20px;padding:12px;margin-top:10px;display:flex;flex-direction:column;gap:10px;box-shadow:var(--shadow)}
@@ -591,6 +597,10 @@ const ICON = Object.fromEntries(Object.entries({
   mute: '<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 9.5l4 5M21 9.5l-4 5"/>',
   exit: '<path d="M10 4H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h4M15 8l4 4-4 4M19 12H9"/>',
   crown: '<path d="M4 18h16l1-10-5 4-4-7-4 7-5-4z"/>',
+  image: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="M21 16l-5-5-8 8"/>',
+  copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
+  share: '<path d="M12 15V4M8 8l4-4 4 4M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>',
+  download: '<path d="M12 4v11M8 11l4 4 4-4M5 19h14"/>',
 }).map(([k, d]) => [k, (s, w) => svg(d, s, w)]));
 
 // 이모지 문자를 SVG로. 목록에 없는 문자는 그대로 보여준다
@@ -1217,45 +1227,254 @@ function resultsHTML(q) {
   }).join('');
   return winner + `<div class="rank">${list}</div>`;
 }
-function summaryHTML() {
-  const revealed = S.questions.filter((q) => q.status === 'revealed');
-  if (!revealed.length) {
-    return `<div class="card center wait"><div class="big-emoji">${emo('🏆')}</div><h2 class="display">최종 결과</h2><p>아직 공개된 결과가 없어요</p></div>`;
-  }
+// 최종 결과 계산: 화면과 내보내기(이미지·텍스트)가 함께 쓴다
+function summaryData() {
   const stats = new Map(S.participants.map((p) => [p.id, { p, wins: 0, votes: 0 }]));
-  const perQ = revealed.map((q) => {
+  const perQ = S.questions.filter((q) => q.status === 'revealed').map((q) => {
     const rows = tallyFor(q.id);
     const top = rows[0]?.v || 0;
     const w = rows.filter((r) => r.v === top && top > 0);
     w.forEach((r) => stats.get(r.p.id) && stats.get(r.p.id).wins++);
     rows.forEach((r) => stats.get(r.p.id) && (stats.get(r.p.id).votes += r.v));
-    return { q, w, top };
+    return { q, n: S.questions.findIndex((x) => x.id === q.id) + 1, w, top };
   });
   const board = [...stats.values()].sort((a, b) => b.wins - a.wins || b.votes - a.votes || a.p.nickname.localeCompare(b.p.nickname, 'ko'));
-  const medals = ['🥇', '🥈', '🥉'].map(emo);
   let rank = 0, prevKey = null;
-  const boardHTML = board.map((s, i) => {
+  board.forEach((s, i) => { // 1위 횟수와 받은 표가 같으면 같은 순위
     const key = s.wins + ':' + s.votes;
     if (key !== prevKey) { rank = i; prevKey = key; }
-    return `
-      <div class="board-row ${rank === 0 && s.wins > 0 ? 'first' : ''}">
-        <span class="medal">${rank < 3 && s.votes > 0 ? medals[rank] : rank + 1}</span>
+    s.rank = rank;
+  });
+  return { board, perQ };
+}
+function summaryHTML() {
+  const { board, perQ } = summaryData();
+  if (!perQ.length) {
+    return `<div class="card center wait"><div class="big-emoji">${emo('🏆')}</div><h2 class="display">최종 결과</h2><p>아직 공개된 결과가 없어요</p></div>`;
+  }
+  const medals = ['🥇', '🥈', '🥉'].map(emo);
+  const boardHTML = board.map((s) => `
+      <div class="board-row ${s.rank === 0 && s.wins > 0 ? 'first' : ''}">
+        <span class="medal">${s.rank < 3 && s.votes > 0 ? medals[s.rank] : s.rank + 1}</span>
         <span class="e">${emo(s.p.emoji)}</span>
         <div><b>${esc(s.p.nickname)}</b><small>총 ${s.votes}표 받음</small></div>
         <span class="trophies">${s.wins ? emo('🏆') + '×' + s.wins : ''}</span>
-      </div>`;
-  }).join('');
-  const qList = perQ.map(({ q, w, top }) => {
-    const n = S.questions.findIndex((x) => x.id === q.id) + 1;
+      </div>`).join('');
+  const qList = perQ.map(({ q, n, w, top }) => {
     const who = w.length ? w.map((r) => emo(r.p.emoji) + ' ' + esc(r.p.nickname)).join(', ') + ` · ${top}표` : '투표 없음';
     return `<div class="qwin"><span class="qn">Q${n}</span><span class="qt">${esc(q.text)}<span class="qw">${who}</span></span></div>`;
   }).join('');
   return `
-    <div class="center" style="margin:4px 0 18px"><div class="big-emoji bob">${emo('🏆')}</div><h2 class="display" style="font-size:30px;margin:4px 0 0">오늘의 최종 결과</h2></div>
+    <div class="center" style="margin:4px 0 14px"><div class="big-emoji bob">${emo('🏆')}</div><h2 class="display" style="font-size:30px;margin:4px 0 0">오늘의 최종 결과</h2></div>
+    <div class="row export-row">
+      <button class="btn ghost sm" data-action="export-image">${ICON.image(18)}이미지로 저장·공유</button>
+      <button class="btn ghost sm" data-action="export-text">${ICON.copy(18)}텍스트 복사</button>
+    </div>
     <div class="board">${boardHTML}</div>
     <div class="sec"><span>질문별 수상자</span></div>
     <div class="card" style="padding:6px 16px">${qList}</div>`;
 }
+
+/* ================= Export results ================= */
+const roomDate = () => {
+  const d = new Date(S.room.created_at || Date.now());
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+};
+function summaryText() {
+  const { board, perQ } = summaryData();
+  const lines = [`${S.room.name} 결과`, `${roomDate()} · ${S.participants.length}명 참여`, '', '[종합 순위]'];
+  board.forEach((s) => lines.push(`${s.rank + 1}위 ${s.p.emoji} ${s.p.nickname} · 1위 ${s.wins}회 · 총 ${s.votes}표`));
+  lines.push('', '[질문별 수상자]');
+  perQ.forEach(({ q, n, w, top }) => {
+    lines.push(`Q${n}. ${q.text}`);
+    lines.push(w.length ? `→ ${w.map((r) => `${r.p.emoji} ${r.p.nickname}`).join(', ')} (${top}표)` : '→ 투표 없음');
+  });
+  return lines.join('\n');
+}
+// 아바타 그림(SVG)을 캔버스에 그릴 수 있는 이미지로 바꾼다
+const emoImgCache = new Map();
+function emoImage(ch) {
+  const m = EMO[emoKey(ch)];
+  const sym = m && document.getElementById('e-' + m[0]);
+  if (!sym) return Promise.resolve(null);
+  if (!emoImgCache.has(m[0])) {
+    emoImgCache.set(m[0], new Promise((res) => {
+      const img = new Image();
+      img.onload = () => res(img);
+      img.onerror = () => res(null);
+      img.src = 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="128" height="128">${sym.innerHTML}</svg>`);
+    }));
+  }
+  return emoImgCache.get(m[0]);
+}
+// 최종 결과를 세로로 긴 PNG 한 장으로 그린다 (가로 1080px)
+async function renderResultImage() {
+  const { board, perQ } = summaryData();
+  const W = 360, P = 20, SCALE = 3;
+  const SANS = "Pretendard, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif";
+  const F = (weight, px, family = SANS) => `${weight} ${px}px ${family}`;
+  const DISP = `Jua, ${SANS}`;
+  const C = { bg: '#FBF4E9', card: '#FFFCF6', line: '#E8D8C2', ink: '#2B1A10', ink2: '#6B5644', gold: '#FFF4DC', goldLine: '#F1D9A6', goldInk: '#7A4E0C', pumpkin: '#B84E0F' };
+  try { await Promise.all([document.fonts.load(F(400, 26, 'Jua')), ...[500, 700, 800].map((w) => document.fonts.load(F(w, 14, 'Pretendard')))]); } catch {}
+  const chars = new Set(['🏆', '🥇', '🥈', '🥉']);
+  board.forEach((s) => chars.add(s.p.emoji));
+  const imgs = new Map();
+  await Promise.all([...chars].map(async (c) => imgs.set(emoKey(c), await emoImage(c))));
+
+  // 같은 그리기 함수를 두 번 쓴다: 먼저 높이를 재고, 그 높이의 캔버스에 실제로 그린다
+  const paint = (ctx) => {
+    const text = (str, x, y, font, color, align = 'left') => { ctx.font = font; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'alphabetic'; ctx.fillText(str, x, y); };
+    const width = (str, font) => { ctx.font = font; return ctx.measureText(str).width; };
+    const fit = (str, font, max) => { // 한 줄에 안 들어가면 …으로 줄임
+      if (width(str, font) <= max) return str;
+      let t = str;
+      while (t.length > 1 && width(t + '…', font) > max) t = t.slice(0, -1);
+      return t + '…';
+    };
+    const wrap = (str, font, max) => { // 띄어쓰기 단위로 줄바꿈, 너무 긴 단어는 글자 단위로
+      const out = []; let line = '';
+      for (const part of String(str).split(/(\s+)/)) {
+        if (width(line + part, font) <= max) { line += part; continue; }
+        if (line.trim()) out.push(line.trim());
+        let w = part.trimStart();
+        while (width(w, font) > max) {
+          let i = w.length;
+          while (i > 1 && width(w.slice(0, i), font) > max) i--;
+          out.push(w.slice(0, i)); w = w.slice(i);
+        }
+        line = w;
+      }
+      if (line.trim()) out.push(line.trim());
+      return out.length ? out : [''];
+    };
+    const box = (x, y, w, h, r, fill, stroke) => {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+      if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+      if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1.5; ctx.stroke(); }
+    };
+    const pic = (ch, x, y, size) => { // 아바타 그림. 그림이 없는 문자는 글자로
+      const im = imgs.get(emoKey(ch));
+      if (im) ctx.drawImage(im, x, y, size, size);
+      else text(String(ch ?? ''), x + size / 2, y + size * 0.84, F(400, size * 0.85), C.ink, 'center');
+    };
+
+    let y = 30;
+    pic('🏆', W / 2 - 28, y, 56); y += 56 + 34;
+    for (const line of wrap(S.room.name, F(400, 26, DISP), W - 2 * P)) { text(line, W / 2, y, F(400, 26, DISP), C.ink, 'center'); y += 32; }
+    y -= 10;
+    text(`${roomDate()} · ${S.participants.length}명 참여 · 질문 ${perQ.length}개`, W / 2, y, F(500, 12), C.ink2, 'center'); y += 34;
+
+    text('종합 순위', P + 2, y, F(800, 13), C.ink2); y += 12;
+    for (const s of board) {
+      const first = s.rank === 0 && s.wins > 0;
+      box(P, y, W - 2 * P, 54, 14, first ? C.gold : C.card, first ? C.goldLine : C.line);
+      if (s.rank < 3 && s.votes > 0) pic(['🥇', '🥈', '🥉'][s.rank], P + 10, y + 14, 26);
+      else text(String(s.rank + 1), P + 23, y + 33, F(800, 15), C.ink2, 'center');
+      pic(s.p.emoji, P + 44, y + 11, 32);
+      text(fit(s.p.nickname, F(700, 15), 150), P + 86, y + 25, F(700, 15), C.ink);
+      text(`총 ${s.votes}표 받음`, P + 86, y + 42, F(500, 11.5), C.ink2);
+      if (s.wins) {
+        const t = '×' + s.wins;
+        text(t, W - P - 14, y + 33, F(800, 14), C.goldInk, 'right');
+        pic('🏆', W - P - 14 - width(t, F(800, 14)) - 23, y + 17, 20);
+      }
+      y += 62;
+    }
+    y += 16;
+
+    text('질문별 수상자', P + 2, y, F(800, 13), C.ink2); y += 12;
+    const TX = P + 16 + 34, TW = W - P - 16 - TX; // 질문 글이 들어가는 칸
+    const qFont = F(500, 13), wFont = F(800, 14.5);
+    const items = perQ.map(({ q, n, w, top }) => {
+      // 수상자 줄: [그림 이름], [그림 이름] · N표 — 길면 여러 줄로
+      const segs = [];
+      w.forEach((r, i) => segs.push({ ch: r.p.emoji, str: r.p.nickname + (i < w.length - 1 ? ',' : '') }));
+      const rows = [[]]; let x = 0;
+      for (const sg of segs) {
+        const sw = 22 + width(sg.str, wFont) + 7;
+        if (x && x + sw > TW) { rows.push([]); x = 0; }
+        rows[rows.length - 1].push({ ...sg, x }); x += sw;
+      }
+      const tail = w.length ? `· ${top}표` : '투표 없음';
+      if (x && x + width(tail, wFont) > TW) { rows.push([]); x = 0; }
+      rows[rows.length - 1].push({ str: tail, x, tail: true });
+      const lines = wrap(q.text, qFont, TW);
+      return { n, lines, rows, h: 13 + lines.length * 19 + 4 + rows.length * 23 + 9 };
+    });
+    box(P, y, W - 2 * P, items.reduce((a, it) => a + it.h, 0), 16, C.card, C.line);
+    items.forEach((it, i) => {
+      if (i) { ctx.save(); ctx.setLineDash([3, 3]); ctx.strokeStyle = C.line; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(P + 14, y); ctx.lineTo(W - P - 14, y); ctx.stroke(); ctx.restore(); }
+      let ty = y + 13 + 13;
+      text('Q' + it.n, P + 16, ty, F(800, 13.5), C.pumpkin);
+      for (const line of it.lines) { text(line, TX, ty, qFont, C.ink2); ty += 19; }
+      ty += 4;
+      for (const row of it.rows) {
+        for (const sg of row) {
+          if (sg.tail) text(sg.str, TX + sg.x, ty, wFont, row.length === 1 && it.rows.length === 1 && sg.str === '투표 없음' ? C.ink2 : C.ink);
+          else { pic(sg.ch, TX + sg.x, ty - 15, 18); text(sg.str, TX + sg.x + 22, ty, wFont, C.ink); }
+        }
+        ty += 23;
+      }
+      y += it.h;
+    });
+    y += 30;
+    text('김김이홍남원 어워즈', W / 2, y, F(400, 13, DISP), C.ink2, 'center');
+    return y + 26;
+  };
+
+  const probe = document.createElement('canvas').getContext('2d');
+  const H = Math.ceil(paint(probe));
+  const canvas = document.createElement('canvas');
+  canvas.width = W * SCALE; canvas.height = H * SCALE;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(SCALE, SCALE);
+  ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
+  const glow = ctx.createRadialGradient(W, 0, 0, W, 0, 300);
+  glow.addColorStop(0, '#F7DFC2'); glow.addColorStop(1, 'rgba(247,223,194,0)');
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, W, 320);
+  paint(ctx);
+  return new Promise((res) => canvas.toBlob(res, 'image/png'));
+}
+let exportUrl = null, exportFile = null;
+async function openExportImage(el) {
+  el.disabled = true;
+  try {
+    const blob = await renderResultImage();
+    if (!blob) throw new Error('empty image');
+    if (exportUrl) URL.revokeObjectURL(exportUrl);
+    exportUrl = URL.createObjectURL(blob);
+    const name = `${S.room.name.replace(/[\\/:*?"<>|]/g, '').trim() || '어워즈'} 결과.png`;
+    exportFile = new File([blob], name, { type: 'image/png' });
+    const canShare = !!(navigator.canShare && navigator.canShare({ files: [exportFile] }));
+    openSheet('export', `
+      <div class="sheet-h"><h3 class="display">결과 이미지</h3><button class="icon-btn" data-action="close-sheet" aria-label="닫기">${ICON.x(18, 2.4)}</button></div>
+      <div class="row">
+        ${canShare ? `<button class="btn" data-action="export-share">${ICON.share(18)}공유하기</button>` : ''}
+        <a class="btn ${canShare ? 'ghost' : ''}" href="${exportUrl}" download="${esc(name)}">${ICON.download(18)}저장하기</a>
+      </div>
+      <p class="hint export-note">버튼이 안 되면 아래 이미지를 길게 눌러 저장하세요</p>
+      <img class="export-img" src="${exportUrl}" alt="최종 결과 이미지">`);
+  } catch (e) {
+    console.error(e);
+    toast('이미지를 만들지 못했어요. 텍스트 복사를 이용해 주세요');
+  } finally { el.disabled = false; }
+}
+async function copyResultText() {
+  const text = summaryText();
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error('no clipboard');
+    await navigator.clipboard.writeText(text);
+    toast('결과를 복사했어요. 채팅에 붙여넣어 보세요');
+  } catch { // 복사가 막힌 환경: 직접 복사할 수 있게 보여준다
+    openSheet('export', `
+      <div class="sheet-h"><h3 class="display">결과 텍스트</h3><button class="icon-btn" data-action="close-sheet" aria-label="닫기">${ICON.x(18, 2.4)}</button></div>
+      <p class="hint">자동 복사가 안 되는 환경이에요. 아래 글을 길게 눌러 복사하세요</p>
+      <textarea class="export-text" readonly rows="14">${esc(text)}</textarea>`);
+  }
+}
+
 function nextDraft() {
   const drafts = S.questions.filter((q) => q.status === 'draft' && askable(q)); // 후보가 없는 질문은 건너뜀
   if (!drafts.length) return null;
@@ -1712,6 +1931,12 @@ const actions = {
     const code = session.code;
     lsDel(LS_SESSION); session = null;
     renderHome(code);
+  },
+  'export-image': openExportImage,
+  'export-text': copyResultText,
+  async 'export-share'() {
+    try { await navigator.share({ files: [exportFile], title: S.room?.name || '김김이홍남원 어워즈' }); }
+    catch (e) { if (e?.name !== 'AbortError') toast('공유하지 못했어요. 저장하기를 이용해 주세요'); }
   },
   'host-tab'(el) { hostTab = el.dataset.tab; renderHostLists(); },
   'host-start'(el) { return hostRpc(el, 'host_start'); },
