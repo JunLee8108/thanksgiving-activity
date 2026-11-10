@@ -64,7 +64,19 @@ label.f{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:16
 .seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(43,26,16,.12)}
 .emoji-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
 .emoji-grid button{display:grid;place-items:center;aspect-ratio:1;border-radius:10px;font-size:22px;background:var(--bg);border:1.5px solid transparent;transition:transform .1s}
-.emoji-grid button:disabled{opacity:.28;filter:grayscale(1);cursor:not-allowed}
+.emoji-grid button.taken{opacity:.3;filter:grayscale(1)}
+.emoji-grid button.nope{animation:nope .4s}
+@keyframes nope{0%,100%{transform:translateX(0)}20%{transform:translateX(-4px) rotate(-6deg)}40%{transform:translateX(4px) rotate(6deg)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+/* 이미 고른 이모지를 눌렀을 때 뜨는 말풍선 */
+#bubble{position:fixed;z-index:85;max-width:250px;padding:10px 14px 10px 12px;border-radius:18px;background:var(--card);border:1.5px solid var(--line);
+  box-shadow:0 14px 30px -12px rgba(43,26,16,.45);display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4;color:var(--ink2);
+  pointer-events:none;transform-origin:var(--tx,50%) 100%;animation:bubble .35s cubic-bezier(.2,1.5,.4,1)}
+#bubble .emo{font-size:30px}
+#bubble b{display:block;font-size:14px;color:var(--ink)}
+#bubble::after{content:'';position:absolute;left:var(--tx,50%);bottom:-7px;width:12px;height:12px;margin-left:-6px;background:var(--card);
+  border-right:1.5px solid var(--line);border-bottom:1.5px solid var(--line);transform:rotate(45deg)}
+#bubble.out{opacity:0;transform:translateY(4px) scale(.96);transition:opacity .2s,transform .2s}
+@keyframes bubble{0%{transform:scale(.6) translateY(8px);opacity:0}100%{transform:scale(1);opacity:1}}
 .emoji-grid button.on{border-color:var(--pumpkin);background:var(--pumpkin-l);transform:scale(1.06)}
 .form-submit{margin-top:22px}
 .gender{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -772,8 +784,10 @@ function renderHome(prefillCode, startTab) {
     ${backLink}
   </div>`;
   $('#f-join').addEventListener('submit', onJoin);
-  $('#j-code').addEventListener('input', () => { clearTimeout(takenTimer); takenTimer = setTimeout(refreshTaken, 300); });
+  $('#j-code').addEventListener('input', () => { clearTimeout(takenTimer); takenTimer = setTimeout(() => refreshTaken(), 300); });
   refreshTaken();
+  clearInterval(takenPoll); // 참가 화면을 보는 동안 누가 먼저 이모지를 가져가는지 계속 확인
+  takenPoll = setInterval(() => { if (document.visibilityState === 'visible' && !$('#f-join')?.hidden) refreshTaken(); }, 3000);
   $('#f-create').addEventListener('submit', onCreate);
 }
 async function onJoin(e) {
@@ -791,37 +805,83 @@ async function onJoin(e) {
     lsSet(LS_NICK, nick); lsSet(LS_GENDER, gender);
     startSession(res);
   } catch (err) {
-    toast(errMsg(err)); btn.disabled = false;
-    if (String(err?.message || '').includes('EMOJI_TAKEN')) refreshTaken();
+    btn.disabled = false;
+    // 간발의 차로 뺏긴 경우: 다른 이모지로 바꿔 주고 말풍선으로 알린다
+    if (String(err?.message || '').includes('EMOJI_TAKEN') && await refreshTaken(true)) return;
+    toast(errMsg(err));
   }
 }
-// 참가하려는 방에서 이미 쓰이는 이모지는 고를 수 없게 표시한다 (24개가 다 찼을 때만 중복 허용)
-let takenTimer = null;
-async function refreshTaken() {
+// 참가 화면: 그 방에서 이미 쓰이는 이모지는 흐리게 표시하고 고를 수 없게 한다 (24개가 다 찼을 때만 중복 허용).
+// 화면을 보고 있는 동안 몇 초마다 다시 확인해서, 누가 먼저 가져가면 바로 반영한다.
+let takenTimer = null, takenPoll = null, takenBusy = false;
+let takenBy = new Map();                    // 이모지 → 그 이모지를 고른 사람의 닉네임
+let takenRoom = { code: '', id: null };     // 방 코드로 찾은 방 (매번 다시 찾지 않도록)
+let takenCode = null;                       // 마지막으로 확인을 끝낸 방 코드
+async function refreshTaken(announce) {
   const inp = $('#j-code'), grid = $('[data-group="j"]');
-  if (!inp || !grid) return;
-  const code = inp.value.trim().toUpperCase();
-  const taken = new Set();
-  if (code.length >= 5) {
-    try {
-      const { data: room } = await sb.from('rooms').select('id').eq('code', code).maybeSingle();
-      if (room) {
-        const { data } = await sb.from('participants').select('emoji').eq('room_id', room.id);
-        (data || []).forEach((p) => taken.add(emoKey(p.emoji)));
-      }
-    } catch (e) { console.error(e); }
-    if (!document.contains(grid) || inp.value.trim().toUpperCase() !== code) return; // 그 사이 화면이나 코드가 바뀜
-  }
-  const full = EMOJIS.every((e) => taken.has(emoKey(e)));
-  const free = [];
-  grid.querySelectorAll('button').forEach((b) => {
-    b.disabled = !full && taken.has(emoKey(b.dataset.e));
-    if (!b.disabled) free.push(b);
-  });
-  const cur = grid.querySelector('button.on');
-  if ((!cur || cur.disabled) && free.length) actions['pick-emoji'](free[Math.floor(Math.random() * free.length)]);
-  $('#j-taken-hint').hidden = full || !taken.size;
+  if (!inp || !grid) { clearInterval(takenPoll); return false; }
+  if (takenBusy) return false;
+  takenBusy = true;
+  try {
+    const code = inp.value.trim().toUpperCase();
+    const taken = new Map();
+    if (code.length >= 5) {
+      try {
+        if (takenRoom.code !== code || !takenRoom.id) {
+          const { data: room } = await sb.from('rooms').select('id').eq('code', code).maybeSingle();
+          takenRoom = { code, id: room ? room.id : null };
+        }
+        if (takenRoom.id) {
+          const { data } = await sb.from('participants').select('emoji,nickname').eq('room_id', takenRoom.id);
+          (data || []).forEach((p) => taken.set(emoKey(p.emoji), p.nickname));
+        }
+      } catch (e) { console.error(e); return false; }
+      if (!document.contains(grid) || inp.value.trim().toUpperCase() !== code) return false; // 그 사이 화면이나 코드가 바뀜
+    }
+    const first = takenCode !== code; // 이 방 코드로 처음 확인하는 것이면 조용히 맞춘다
+    takenCode = code;
+    takenBy = EMOJIS.every((e) => taken.has(emoKey(e))) ? new Map() : taken;
+    const free = [];
+    grid.querySelectorAll('button').forEach((b) => {
+      const off = takenBy.has(emoKey(b.dataset.e));
+      b.classList.toggle('taken', off); b.setAttribute('aria-disabled', off);
+      if (!off) free.push(b);
+    });
+    $('#j-taken-hint').hidden = !takenBy.size;
+    const cur = grid.querySelector('button.on');
+    if (!cur || !cur.classList.contains('taken') || !free.length) return false;
+    // 내가 골라 둔 이모지를 다른 사람이 가져감: 남은 것 중 하나로 바꾼다
+    const who = takenBy.get(emoKey(cur.dataset.e));
+    actions['pick-emoji'](free[Math.floor(Math.random() * free.length)]);
+    if (first && !announce) return false;
+    emojiBubble(cur, `${who}님이 방금 골랐어요`, '다른 이모지로 바꿔 드렸어요');
+    return true;
+  } finally { takenBusy = false; }
 }
+let bubbleTimer = null;
+function emojiBubble(el, title, sub) {
+  let b = $('#bubble');
+  if (!b) { b = document.createElement('div'); b.id = 'bubble'; b.setAttribute('role', 'status'); document.body.appendChild(b); }
+  b.className = '';
+  b.innerHTML = `${emo(el.dataset.e)}<span><b>${esc(title)}</b>${esc(sub)}</span>`;
+  b.hidden = false;
+  b.style.animation = 'none'; void b.offsetWidth; b.style.animation = ''; // 연달아 눌러도 다시 튀어나오게
+  const r = el.getBoundingClientRect(), w = b.offsetWidth, h = b.offsetHeight;
+  const cx = r.left + r.width / 2;
+  const left = Math.max(8, Math.min(innerWidth - w - 8, cx - w / 2));
+  b.style.left = left + 'px';
+  b.style.top = Math.max(8, r.top - h - 12) + 'px';
+  b.style.setProperty('--tx', cx - left + 'px'); // 꼬리가 누른 이모지를 가리키도록
+  clearTimeout(bubbleTimer);
+  bubbleTimer = setTimeout(hideBubble, 2400);
+}
+function hideBubble() {
+  const b = $('#bubble'); if (!b || b.hidden) return;
+  clearTimeout(bubbleTimer);
+  b.classList.add('out');
+  bubbleTimer = setTimeout(() => { b.hidden = true; }, 220);
+}
+window.addEventListener('scroll', hideBubble, { passive: true });
 async function onCreate(e) {
   e.preventDefault();
   const name = $('#c-name').value.trim();
@@ -856,6 +916,7 @@ function teardownRoom() {
 }
 async function enterRoom() {
   teardownRoom();
+  clearInterval(takenPoll); $('#bubble')?.remove();
   firstLoad = true; seenRevealed = new Set(); lastOpenSeen = null;
   Object.assign(S, { room: null, participants: [], questions: [], online: new Set(), myVotes: {}, results: new Map() });
   resetChat();
@@ -1581,6 +1642,11 @@ const actions = {
     $('#f-create').hidden = t !== 'create';
   },
   'pick-emoji'(el) {
+    if (el.classList.contains('taken')) { // 이미 다른 사람이 고른 이모지
+      const who = takenBy.get(emoKey(el.dataset.e));
+      el.classList.remove('nope'); void el.offsetWidth; el.classList.add('nope');
+      return emojiBubble(el, '앗, 한발 늦었어요!', who ? `${who}님이 먼저 골랐어요` : '다른 사람이 이미 골랐어요');
+    }
     const grid = el.closest('.emoji-grid');
     grid.dataset.value = el.dataset.e;
     grid.querySelectorAll('button').forEach((b) => { b.classList.toggle('on', b === el); b.setAttribute('aria-pressed', b === el); });
