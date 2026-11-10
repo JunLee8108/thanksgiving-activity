@@ -199,8 +199,8 @@ label.f{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:16
 
 /* Toast */
 #toast{position:fixed;top:calc(14px + env(safe-area-inset-top));left:50%;transform:translate(-50%,-140%);z-index:80;background:var(--ink);color:#fff;
-  padding:12px 18px;border-radius:14px;font-weight:700;font-size:14px;max-width:calc(100% - 32px);box-shadow:0 12px 30px -10px rgba(0,0,0,.4);transition:transform .3s cubic-bezier(.2,1.2,.4,1)}
-#toast.show{transform:translate(-50%,0)}
+  padding:12px 18px;border-radius:14px;font-weight:700;font-size:14px;max-width:calc(100% - 32px);box-shadow:0 12px 30px -10px rgba(0,0,0,.4);visibility:hidden;transition:transform .3s cubic-bezier(.2,1.2,.4,1),visibility 0s .3s}
+#toast.show{transform:translate(-50%,0);visibility:visible;transition-delay:0s}
 .conn{position:fixed;top:0;left:0;right:0;z-index:50;background:var(--cran);color:#fff;text-align:center;font-size:12px;font-weight:700;padding:5px calc(8px + env(safe-area-inset-top)) 5px}
 
 @keyframes bob{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-8px) rotate(3deg)}}
