@@ -169,21 +169,26 @@ label.f{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:16
 .rank-row .v{font-weight:900;color:var(--pumpkin-d);font-size:15px}
 
 /* Summary */
-.board{display:flex;flex-direction:column;gap:8px}
-.board-row{display:grid;grid-template-columns:34px 40px 1fr auto;align-items:center;gap:8px;background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:12px}
-.board-row.first{background:var(--gold-l);border-color:#F1D9A6}
-.board-row .medal{font-size:22px;text-align:center;font-weight:900;color:var(--ink3)}
-.board-row .e{font-size:30px;text-align:center}
-.board-row b{font-size:16px}
-.board-row small{display:block;color:var(--ink3);font-weight:600;font-size:12px;margin-top:2px}
-.board-row .trophies{font-weight:900;color:#8A5A12}
-.qwin{display:flex;gap:10px;align-items:flex-start;padding:12px 2px;border-bottom:1px dashed var(--line)}
-.qwin:last-child{border-bottom:0}
-.qwin .qn{font-weight:900;color:var(--pumpkin);min-width:28px}
-.qwin .qt{flex:1;font-size:14px;color:var(--ink2);line-height:1.45}
-.qwin .qw{display:block;color:var(--ink);font-weight:800;font-size:15px;margin-top:3px}
-.qwin .qr{display:block;margin-top:3px;font-size:13px;font-weight:600;color:var(--ink2)}
-.qwin .qr b{display:inline-block;min-width:30px;font-weight:800}
+/* 최종 결과: 질문마다 1~3위에 메달, 그 아래 순위는 '더 보기'로 */
+.qcards{display:flex;flex-direction:column;gap:10px}
+.qcard{padding:14px 16px 12px}
+.qc-h{display:flex;gap:8px;align-items:baseline;margin-bottom:8px;font-size:14px;line-height:1.45;color:var(--ink2);word-break:keep-all}
+.qc-h b{flex-shrink:0;font-weight:900;color:var(--pumpkin-d)}
+.qrow{display:flex;align-items:center;gap:8px;min-height:34px}
+.qrow .md{flex-shrink:0;width:26px;display:grid;place-items:center;font-size:22px}
+.qrow .ppl{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:2px 10px;font-weight:700;font-size:14px}
+.qrow .who{display:inline-flex;align-items:center;gap:5px}
+.qrow .who .emo{font-size:18px}
+.qrow .v{flex-shrink:0;font-weight:800;font-size:13px;color:var(--ink2)}
+.qrow.r1 .ppl{font-weight:800;font-size:16px}
+.qrow.r1 .who .emo{font-size:22px}
+.qrow.r1 .v{font-size:14px;color:var(--pumpkin-d)}
+.qrow.rest .md{font-size:12px;font-weight:800;color:var(--ink2)}
+.qrow.rest .ppl{font-weight:600;color:var(--ink2)}
+.qrow.none{font-size:14px;color:var(--ink2)}
+.q-more{display:flex;align-items:center;gap:4px;height:40px;margin-top:2px;font-size:13px;font-weight:700;color:var(--ink2)}
+.q-more .ic{transition:transform .2s}
+.q-more[aria-expanded="true"] .ic{transform:rotate(180deg)}
 
 /* Dock */
 #dock{position:fixed;left:0;right:0;bottom:0;z-index:20;pointer-events:none}
@@ -629,6 +634,7 @@ const ICON = Object.fromEntries(Object.entries({
   skip: '<path d="M5 5l9 7-9 7z"/><path d="M19 5v14"/>',
   trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0V4z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 20h8"/>',
   chevR: '<path d="M9 6l6 6-6 6"/>',
+  chevD: '<path d="M6 9l6 6 6-6"/>',
   chevL: '<path d="M15 6l-6 6 6 6"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   check: '<path d="M5 12l5 5 9-10"/>',
@@ -978,7 +984,7 @@ async function enterRoom() {
   firstLoad = true; seenRevealed = new Set(); lastOpenSeen = null;
   Object.assign(S, { room: null, participants: [], questions: [], online: new Set(), myVotes: {}, results: new Map() });
   resetChat();
-  S.pending = null; stageHTML = '';
+  S.pending = null; stageHTML = ''; moreOpen.clear();
   $('#app').innerHTML = `<div class="wrap"><header class="top" id="hdr"></header><main id="stage"><div class="card center" style="padding:40px">불러오는 중…</div></main></div>`;
   await refresh();
   if (!session) return;
@@ -1270,51 +1276,44 @@ function resultsHTML(q) {
   }).join('');
   return winner + `<div class="rank">${list}</div>`;
 }
-// 최종 결과 계산: 화면과 내보내기(이미지·텍스트)가 함께 쓴다
+// 최종 결과 계산: 화면과 내보내기(이미지·텍스트)가 함께 쓴다.
+// 질문마다 순위별 묶음을 만든다. 표 수가 같으면 같은 순위 (예: 1위, 공동 2위 두 명, 4위)
+const MEDAL = { 1: '🥇', 2: '🥈', 3: '🥉' };
+const moreOpen = new Set(); // '나머지 순위'를 펼쳐 둔 질문
 function summaryData() {
-  const stats = new Map(S.participants.map((p) => [p.id, { p, wins: 0, votes: 0 }]));
-  const perQ = S.questions.filter((q) => q.status === 'revealed').map((q) => {
-    const rows = tallyFor(q.id);
-    const top = rows[0]?.v || 0;
-    const w = rows.filter((r) => r.v === top && top > 0);
-    w.forEach((r) => stats.get(r.p.id) && stats.get(r.p.id).wins++);
-    rows.forEach((r) => stats.get(r.p.id) && (stats.get(r.p.id).votes += r.v));
-    const podium = []; // 3위까지. 표 수가 같으면 같은 순위로 묶는다 (예: 1위, 공동 2위 두 명)
-    rows.forEach((r, i) => {
-      const last = podium[podium.length - 1];
+  return S.questions.filter((q) => q.status === 'revealed').map((q) => {
+    const groups = [];
+    tallyFor(q.id).forEach((r, i) => {
+      const last = groups[groups.length - 1];
       if (last && last.votes === r.v) last.people.push(r.p);
-      else if (i < 3) podium.push({ rank: i + 1, votes: r.v, people: [r.p] });
+      else groups.push({ rank: i + 1, votes: r.v, people: [r.p] });
     });
-    return { q, n: S.questions.findIndex((x) => x.id === q.id) + 1, w, top, podium };
+    return {
+      q, n: S.questions.findIndex((x) => x.id === q.id) + 1,
+      podium: groups.filter((g) => g.rank <= 3), // 메달을 받는 1~3위
+      rest: groups.filter((g) => g.rank > 3),    // '더 보기'로 펼치는 4위 이하
+    };
   });
-  const board = [...stats.values()].sort((a, b) => b.wins - a.wins || b.votes - a.votes || a.p.nickname.localeCompare(b.p.nickname, 'ko'));
-  let rank = 0, prevKey = null;
-  board.forEach((s, i) => { // 1위 횟수와 받은 표가 같으면 같은 순위
-    const key = s.wins + ':' + s.votes;
-    if (key !== prevKey) { rank = i; prevKey = key; }
-    s.rank = rank;
-  });
-  return { board, perQ };
 }
 function summaryHTML() {
-  const { board, perQ } = summaryData();
+  const perQ = summaryData();
   if (!perQ.length) {
     return `<div class="card center wait"><div class="big-emoji">${emo('🏆')}</div><h2 class="display">최종 결과</h2><p>아직 공개된 결과가 없어요</p></div>`;
   }
-  const medals = ['🥇', '🥈', '🥉'].map(emo);
-  const boardHTML = board.map((s) => `
-      <div class="board-row ${s.rank === 0 && s.wins > 0 ? 'first' : ''}">
-        <span class="medal">${s.rank < 3 && s.votes > 0 ? medals[s.rank] : s.rank + 1}</span>
-        <span class="e">${emo(s.p.emoji)}</span>
-        <div><b>${esc(s.p.nickname)}</b><small>총 ${s.votes}표 받음</small></div>
-        <span class="trophies">${s.wins ? emo('🏆') + '×' + s.wins : ''}</span>
-      </div>`).join('');
-  const names = (people) => people.map((p) => emo(p.emoji) + ' ' + esc(p.nickname)).join(', ');
-  const qList = perQ.map(({ q, n, podium }) => {
-    const [first, ...rest] = podium;
-    const who = first ? `${names(first.people)} · ${first.votes}표` : '투표 없음';
-    const runners = rest.map((g) => `<span class="qr"><b>${g.rank}위</b>${names(g.people)} · ${g.votes}표</span>`).join('');
-    return `<div class="qwin"><span class="qn">Q${n}</span><span class="qt">${esc(q.text)}<span class="qw">${who}</span>${runners}</span></div>`;
+  const names = (people) => people.map((p) => `<span class="who">${emo(p.emoji)}${esc(p.nickname)}</span>`).join('');
+  const row = (g, cls, mark) => `<div class="qrow ${cls}"><span class="md">${mark}</span><span class="ppl">${names(g.people)}</span><span class="v">${g.votes}표</span></div>`;
+  const cards = perQ.map(({ q, n, podium, rest }) => {
+    const open = moreOpen.has(q.id);
+    const others = rest.reduce((a, g) => a + g.people.length, 0);
+    const more = rest.length ? `
+      <button class="q-more" data-action="more-q" data-q="${q.id}" aria-expanded="${open}">${open ? '나머지 순위 접기' : `나머지 순위 더 보기 (${others}명)`}${ICON.chevD(16, 2.4)}</button>
+      ${open ? rest.map((g) => row(g, 'rest', g.rank + '위')).join('') : ''}` : '';
+    return `
+      <div class="card qcard">
+        <div class="qc-h"><b>Q${n}</b><span>${esc(q.text)}</span></div>
+        ${podium.length ? podium.map((g) => row(g, 'r' + g.rank, emo(MEDAL[g.rank]))).join('') : '<div class="qrow none">투표 없음</div>'}
+        ${more}
+      </div>`;
   }).join('');
   return `
     <div class="center" style="margin:4px 0 14px"><div class="big-emoji bob">${emo('🏆')}</div><h2 class="display" style="font-size:30px;margin:4px 0 0">오늘의 최종 결과</h2></div>
@@ -1322,9 +1321,7 @@ function summaryHTML() {
       <button class="btn ghost sm" data-action="export-image">${ICON.image(18)}이미지로 저장·공유</button>
       <button class="btn ghost sm" data-action="export-text">${ICON.copy(18)}텍스트 복사</button>
     </div>
-    <div class="board">${boardHTML}</div>
-    <div class="sec"><span>질문별 수상자</span></div>
-    <div class="card" style="padding:6px 16px">${qList}</div>`;
+    <div class="qcards">${cards}</div>`;
 }
 
 /* ================= Export results ================= */
@@ -1333,16 +1330,13 @@ const roomDate = () => {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
 };
 function summaryText() {
-  const { board, perQ } = summaryData();
-  const lines = [`${S.room.name} 결과`, `${roomDate()} · ${S.participants.length}명 참여`, '', '[종합 순위]'];
-  board.forEach((s) => lines.push(`${s.rank + 1}위 ${s.p.emoji} ${s.p.nickname} · 1위 ${s.wins}회 · 총 ${s.votes}표`));
-  lines.push('', '[질문별 수상자]');
+  const perQ = summaryData();
   const names = (people) => people.map((p) => `${p.emoji} ${p.nickname}`).join(', ');
+  const lines = [`${S.room.name} 결과`, `${roomDate()} · ${S.participants.length}명 참여 · 질문 ${perQ.length}개`];
   perQ.forEach(({ q, n, podium }) => {
-    const [first, ...rest] = podium;
-    lines.push(`Q${n}. ${q.text}`);
-    lines.push(first ? `→ ${names(first.people)} (${first.votes}표)` : '→ 투표 없음');
-    rest.forEach((g) => lines.push(`   ${g.rank}위 ${names(g.people)} (${g.votes}표)`));
+    lines.push('', `Q${n}. ${q.text}`);
+    if (!podium.length) lines.push('투표 없음');
+    podium.forEach((g) => lines.push(`${MEDAL[g.rank]} ${names(g.people)} (${g.votes}표)`));
   });
   return lines.join('\n');
 }
@@ -1364,7 +1358,7 @@ function emoImage(ch) {
 }
 // 최종 결과를 세로로 긴 PNG 한 장으로 그린다 (가로 1080px)
 async function renderResultImage() {
-  const { board, perQ } = summaryData();
+  const perQ = summaryData();
   const W = 360, P = 20, SCALE = 3;
   const SANS = "Pretendard, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif";
   const F = (weight, px, family = SANS) => `${weight} ${px}px ${family}`;
@@ -1372,7 +1366,7 @@ async function renderResultImage() {
   const C = { bg: '#FBF4E9', card: '#FFFCF6', line: '#E8D8C2', ink: '#2B1A10', ink2: '#6B5644', gold: '#FFF4DC', goldLine: '#F1D9A6', goldInk: '#7A4E0C', pumpkin: '#B84E0F' };
   try { await Promise.all([document.fonts.load(F(400, 26, 'Jua')), ...[500, 700, 800].map((w) => document.fonts.load(F(w, 14, 'Pretendard')))]); } catch {}
   const chars = new Set(['🏆', '🥇', '🥈', '🥉']);
-  board.forEach((s) => chars.add(s.p.emoji));
+  perQ.forEach(({ podium }) => podium.forEach((g) => g.people.forEach((p) => chars.add(p.emoji))));
   const imgs = new Map();
   await Promise.all([...chars].map(async (c) => imgs.set(emoKey(c), await emoImage(c))));
 
@@ -1421,50 +1415,30 @@ async function renderResultImage() {
     y -= 10;
     text(`${roomDate()} · ${S.participants.length}명 참여 · 질문 ${perQ.length}개`, W / 2, y, F(500, 12), C.ink2, 'center'); y += 34;
 
-    text('종합 순위', P + 2, y, F(800, 13), C.ink2); y += 12;
-    for (const s of board) {
-      const first = s.rank === 0 && s.wins > 0;
-      box(P, y, W - 2 * P, 54, 14, first ? C.gold : C.card, first ? C.goldLine : C.line);
-      if (s.rank < 3 && s.votes > 0) pic(['🥇', '🥈', '🥉'][s.rank], P + 10, y + 14, 26);
-      else text(String(s.rank + 1), P + 23, y + 33, F(800, 15), C.ink2, 'center');
-      pic(s.p.emoji, P + 44, y + 11, 32);
-      text(fit(s.p.nickname, F(700, 15), 150), P + 86, y + 25, F(700, 15), C.ink);
-      text(`총 ${s.votes}표 받음`, P + 86, y + 42, F(500, 11.5), C.ink2);
-      if (s.wins) {
-        const t = '×' + s.wins;
-        text(t, W - P - 14, y + 33, F(800, 14), C.goldInk, 'right');
-        pic('🏆', W - P - 14 - width(t, F(800, 14)) - 23, y + 17, 20);
-      }
-      y += 62;
-    }
-    y += 16;
-
-    text('질문별 수상자', P + 2, y, F(800, 13), C.ink2); y += 12;
     const TX = P + 16 + 34, TW = W - P - 16 - TX; // 질문 글이 들어가는 칸
-    const qFont = F(500, 13), wFont = F(800, 14.5), rFont = F(600, 12.5), lFont = F(800, 12.5);
+    const qFont = F(500, 13), wFont = F(800, 14.5), rFont = F(600, 13);
+    const LEAD = 26; // 메달이 들어가는 칸
     // 한 순위의 사람들을 "[그림 이름], [그림 이름] · N표"로 늘어놓는다. 길면 여러 줄로
-    const flow = (people, tail, font, size, lead) => {
-      const rows = [[]]; let x = 0;
-      if (lead) { rows[0].push({ str: lead, x, font: lFont }); x = 30; }
-      const start = x;
+    const flow = (people, tail, font, size) => {
+      const rows = [[]]; let x = LEAD;
       people.forEach((p, i) => {
         const str = p.nickname + (i < people.length - 1 ? ',' : '');
         const sw = size + 4 + width(str, font) + 7;
-        if (x > start && x + sw > TW) { rows.push([]); x = start; }
+        if (x > LEAD && x + sw > TW) { rows.push([]); x = LEAD; }
         rows[rows.length - 1].push({ ch: p.emoji, str, x, font, size }); x += sw;
       });
-      if (x > start && x + width(tail, font) > TW) { rows.push([]); x = start; }
+      if (x > LEAD && x + width(tail, font) > TW) { rows.push([]); x = LEAD; }
       rows[rows.length - 1].push({ str: tail, x, font });
       return rows;
     };
     const items = perQ.map(({ q, n, podium }) => {
-      const [first, ...rest] = podium;
-      const blocks = [first
-        ? { rows: flow(first.people, `· ${first.votes}표`, wFont, 18), lh: 23, color: C.ink }
-        : { rows: [[{ str: '투표 없음', x: 0, font: wFont }]], lh: 23, color: C.ink2 }];
-      rest.forEach((g) => blocks.push({ rows: flow(g.people, `· ${g.votes}표`, rFont, 15, g.rank + '위'), lh: 20, color: C.ink2 }));
+      const blocks = podium.length
+        ? podium.map((g) => (g.rank === 1
+          ? { medal: MEDAL[1], rows: flow(g.people, `· ${g.votes}표`, wFont, 18), lh: 25, color: C.ink }
+          : { medal: MEDAL[g.rank], rows: flow(g.people, `· ${g.votes}표`, rFont, 15), lh: 23, color: C.ink2 }))
+        : [{ rows: [[{ str: '투표 없음', x: 0, font: rFont }]], lh: 23, color: C.ink2 }];
       const lines = wrap(q.text, qFont, TW);
-      return { n, lines, blocks, h: 13 + lines.length * 19 + 4 + blocks.reduce((a, b) => a + b.rows.length * b.lh, 0) + 9 };
+      return { n, lines, blocks, h: 13 + lines.length * 19 + 6 + blocks.reduce((a, b) => a + b.rows.length * b.lh, 0) + 7 };
     });
     box(P, y, W - 2 * P, items.reduce((a, it) => a + it.h, 0), 16, C.card, C.line);
     items.forEach((it, i) => {
@@ -1472,8 +1446,9 @@ async function renderResultImage() {
       let ty = y + 13 + 13;
       text('Q' + it.n, P + 16, ty, F(800, 13.5), C.pumpkin);
       for (const line of it.lines) { text(line, TX, ty, qFont, C.ink2); ty += 19; }
-      ty += 4;
+      ty += 6;
       for (const b of it.blocks) {
+        if (b.medal) pic(b.medal, TX, ty - 15, 19);
         for (const row of b.rows) {
           for (const sg of row) {
             if (sg.ch === undefined) text(sg.str, TX + sg.x, ty, sg.font, b.color);
@@ -2056,6 +2031,11 @@ const actions = {
     const code = session.code;
     lsDel(LS_SESSION); session = null;
     renderHome(code);
+  },
+  'more-q'(el) { // 최종 결과에서 4위 이하 펼치기·접기
+    const id = el.dataset.q;
+    if (moreOpen.has(id)) moreOpen.delete(id); else moreOpen.add(id);
+    renderStage();
   },
   'export-image': openExportImage,
   'export-text': copyResultText,
