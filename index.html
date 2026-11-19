@@ -323,7 +323,7 @@ a.btn{text-decoration:none}
 .share-link{font-size:13px;color:var(--ink3);text-align:center;word-break:break-all;margin-bottom:14px}
 
 /* Chat */
-/* 상단 줄 오른쪽: 인원 · 초대 링크 · 채팅 · 메뉴 */
+/* 상단 줄 오른쪽: 인원 · 채팅 · 메뉴 (친구 초대는 메뉴 안에 있다) */
 .top-acts{display:flex;align-items:center;gap:6px;flex-shrink:0}
 .top-acts .icon-btn{width:38px;height:38px;border-radius:11px}
 .top-acts .chip{height:30px;padding:0 9px;gap:5px}
@@ -1115,7 +1115,6 @@ function renderHeader() {
     <div class="room-name display">${esc(S.room.name)}</div>
     <div class="top-acts">
       <span class="chip" role="img" aria-label="${S.participants.length}명 중 ${online}명 접속"><i class="dot"></i>${online}/${S.participants.length}</span>
-      <button class="icon-btn" data-action="share" aria-label="친구 초대 (방 코드 ${esc(S.room.code)})">${ICON.link(18)}</button>
       <button class="icon-btn chat-btn" data-action="chat" aria-label="채팅${unread ? ` (안 읽은 메시지 ${unread}개)` : ''}">${ICON.chat(18)}${unread ? `<span class="badge">${unread > 99 ? '99+' : unread}</span>` : ''}</button>
       <button class="icon-btn" data-action="menu" aria-label="메뉴">${ICON.dots(18, 3)}</button>
     </div>`;
