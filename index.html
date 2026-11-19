@@ -211,6 +211,35 @@ a.btn{text-decoration:none}
 .export-note{text-align:center;margin-top:10px}
 .export-text{min-height:260px;margin-top:10px;font-size:13px}
 
+/* Liar game */
+.game-seg{margin-bottom:12px}
+.cat-chips{display:flex;flex-wrap:wrap;gap:6px}
+.cat-chips button{height:38px;padding:0 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);font-weight:700;font-size:14px;color:var(--ink2)}
+.cat-chips button.on{border-color:var(--pumpkin-d);background:var(--pumpkin-l);color:var(--pumpkin-d)}
+.lcard{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;width:100%;min-height:190px;padding:22px 18px;border-radius:24px;
+  text-align:center;border:2px dashed var(--line);background:var(--card);box-shadow:var(--shadow);transition:transform .1s}
+button.lcard:active{transform:scale(.98)}
+.lcard .lc-k{font-size:13px;font-weight:800;color:var(--ink2)}
+.lcard b{font-size:36px;font-weight:400;line-height:1.2;word-break:keep-all}
+.lcard small{font-size:13px;line-height:1.5;color:var(--ink2)}
+.lcard i{margin-top:4px;font-style:normal;font-size:12px;font-weight:700;color:var(--ink2)}
+.lcard.closed b{font-size:26px}
+.lcard.open{border-style:solid;border-color:#F0CF92;background:var(--gold-l)}
+.lcard.open.liar{border-color:#E9C7C3;background:#FBE9E7}
+.lcard.open.liar b{color:var(--cran)}
+.lcard.mini{min-height:0;margin-top:16px;padding:14px 16px;gap:2px}
+.lcard.mini b{font-size:22px}
+.order{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.order li{display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 13px 0 6px;border-radius:999px;background:var(--card);border:1.5px solid var(--line);font-weight:700;font-size:15px}
+.order li b{width:24px;height:24px;border-radius:50%;background:var(--bg2);display:grid;place-items:center;font-size:12px;font-weight:800;color:var(--ink2)}
+.order li .emo{font-size:20px}
+.order li.me{border-color:var(--pumpkin-d);background:var(--pumpkin-l)}
+.winner .lc-k{font-size:16px;font-weight:800;color:#7A4E0C}
+.winner.liarwin{background:#FBE9E7;border-color:#E9C7C3}
+.winner.liarwin .lc-k,.winner.liarwin .w-sub{color:var(--cran)}
+.tag-liar{display:inline-flex;align-items:center;height:20px;padding:0 7px;margin-left:6px;border-radius:999px;background:var(--cran);color:#fff;font-size:11px;font-weight:800;vertical-align:middle}
+.liar-note{text-align:center;margin:14px 0 0;font-size:14px;font-weight:700;color:var(--ink2)}
+
 /* Host card */
 .hostcard{background:var(--card);border:1.5px solid var(--line);border-radius:20px;padding:12px;margin-top:10px;display:flex;flex-direction:column;gap:10px;box-shadow:var(--shadow)}
 .hc-top{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px}
@@ -468,6 +497,9 @@ const LS_SESSION = 'tg-awards-session';
 const LS_NICK = 'tg-awards-nick';
 const LS_SOUND = 'tg-awards-sound';
 const LS_GENDER = 'tg-awards-gender';
+const LS_LIAR_CAT = 'tg-awards-liar-cat';
+// 라이어 게임 주제. 단어 목록은 서버에만 있고, 서버가 단어와 라이어를 뽑는다
+const LIAR_CATS = [['random', '랜덤'], ['음식', '음식'], ['동물', '동물'], ['장소', '장소'], ['직업', '직업'], ['물건', '물건'], ['스포츠', '스포츠']];
 const LS_CHAT_READ = 'tg-awards-chat-read';
 const CHAT_MAX = 200;
 // 고를 수 있는 아바타 24종 (동물 16 + 얼굴·캐릭터 8). 예전 음식·가을 아바타는 고를 수 없지만 이미 쓰는 방에서는 그대로 보인다
@@ -570,11 +602,14 @@ const ERRORS = {
   TOO_FAST: '메시지를 너무 빨리 보내고 있어요. 잠시 후 다시 보내주세요',
   NO_QUESTIONS: '시작할 질문이 없어요. 질문을 먼저 추가해주세요',
   BAD_GENDER: '성별을 골라주세요',
+  NEED_3: '라이어 게임은 3명 이상 모여야 시작할 수 있어요',
+  NOT_PLAYER: '이번 판은 관전 중이에요. 다음 판부터 함께해요',
 };
 
 /* ================= State ================= */
 let session = null; // { token, participant_id, room_id, code }
-const S = { room: null, participants: [], questions: [], online: new Set(), myVotes: {}, results: new Map(), pending: null };
+const S = { room: null, participants: [], questions: [], online: new Set(), myVotes: {}, results: new Map(), pending: null,
+  liar: null, card: null, liarVote: null, liarPending: null }; // 라이어 게임: 진행 중인 판, 내 카드, 내 투표, 아직 투표 안 한 사람(호스트만)
 let channel = null;
 let firstLoad = true;
 let seenRevealed = new Set();
@@ -587,6 +622,10 @@ const picked = new Set(); // 골라 둔 질문 id
 let panelToBottom = false; // 질문을 추가한 뒤 목록을 맨 아래로
 let stageHTML = '';
 let addTarget = 'all';     // 새로 추가할 질문의 후보 범위
+let liarCat = LIAR_CATS.some(([k]) => k === lsGet(LS_LIAR_CAT)) ? lsGet(LS_LIAR_CAT) : 'random'; // 호스트가 고른 주제
+let cardOpen = false, cardTimer = null; // 내 카드를 펼쳐 보고 있는지 (잠시 뒤 저절로 닫힌다)
+let lastLiarRound = null;
+const seenLiarResult = new Set();
 let ovTimer = null;
 let soundOn = lsGet(LS_SOUND) !== 'off';
 // msgs: 서버에 저장된 메시지(id 오름차순), pending: 전송 중인 내 메시지
@@ -991,6 +1030,8 @@ async function enterRoom() {
   Object.assign(S, { room: null, participants: [], questions: [], online: new Set(), myVotes: {}, results: new Map() });
   resetChat();
   S.pending = null; stageHTML = ''; moreOpen.clear();
+  Object.assign(S, { liar: null, card: null, liarVote: null, liarPending: null });
+  cardOpen = false; lastLiarRound = null; seenLiarResult.clear();
   $('#app').innerHTML = `<div class="wrap"><header class="top" id="hdr"></header><main id="stage"><div class="card center" style="padding:40px">불러오는 중…</div></main></div>`;
   await refresh();
   if (!session) return;
@@ -1036,6 +1077,23 @@ async function refresh() {
       try { pending = new Set(await rpc('host_pending_voters', { p_token: session.token })); } catch (e) { console.error(e); }
     }
     S.pending = pending;
+
+    // 라이어 게임: 진행 중인 판과 내 카드. 제시어는 내 카드로만 받고, 결과가 나오기 전에는 누구도 라이어를 알 수 없다
+    let liar = null, card = S.card, liarVote = null, liarPending = null;
+    if (S.room.game === 'liar' && S.room.liar_round_id) {
+      const lr = await sb.from('liar_rounds').select('*').eq('id', S.room.liar_round_id).maybeSingle();
+      if (lr.error) throw lr.error;
+      liar = lr.data;
+      if (liar) {
+        if (!card || card.round_id !== liar.id) card = await rpc('liar_my_card', { p_token: session.token });
+        if (liar.status === 'voting') {
+          liarVote = await rpc('liar_my_vote', { p_token: session.token });
+          if (isHost()) { try { liarPending = new Set(await rpc('liar_pending_voters', { p_token: session.token })); } catch (e) { console.error(e); } }
+        }
+        if (firstLoad && liar.status === 'result') seenLiarResult.add(liar.id);
+      }
+    }
+    Object.assign(S, { liar, card: liar ? card : null, liarVote, liarPending });
     if (S.questions.some((x) => x.status === 'revealed')) {
       const rows = await rpc('get_revealed_results', { p_room_id: rid });
       const m = new Map();
@@ -1062,6 +1120,7 @@ function subscribe() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'rooms', filter: 'id=eq.' + rid }, scheduleRefresh)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'questions', filter: 'room_id=eq.' + rid }, scheduleRefresh)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'participants', filter: 'room_id=eq.' + rid }, scheduleRefresh)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'liar_rounds', filter: 'room_id=eq.' + rid }, scheduleRefresh)
     .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'participants' }, scheduleRefresh)
     .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'questions' }, scheduleRefresh)
     .on('presence', { event: 'sync' }, () => {
@@ -1085,12 +1144,22 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 /* ================= Render: room ================= */
 function render() {
   if (!S.room) return;
+  // 라이어 게임의 새 판이 시작되면 카드는 가린 채로 시작한다
+  const lr = S.room.game === 'liar' ? S.liar : null;
+  const newRound = !!lr && lr.id !== lastLiarRound;
+  if ((lr ? lr.id : null) !== lastLiarRound) { lastLiarRound = lr ? lr.id : null; cardOpen = false; clearTimeout(cardTimer); }
   renderHeader();
   renderStage();
   renderDock();
   if (sheetKind === 'host') renderHostLists();
   if (sheetKind === 'menu') renderMenu();
   if (sheetKind === 'chat') renderChatList();
+
+  if (lr && !firstLoad) {
+    if (newRound && lr.status === 'describe') { vibrate(80); playBlip(); }
+    if (lr.status === 'result' && !seenLiarResult.has(lr.id)) playReveal({ text: '라이어는 누구였을까요?' });
+  }
+  if (lr && lr.status === 'result') seenLiarResult.add(lr.id);
 
   const cur = currentQuestion(), ph = S.room.phase;
   const openId = ph === 'question' && cur && cur.status === 'open' ? cur.id : null;
@@ -1132,7 +1201,8 @@ function renderStage() {
   const st = $('#stage'); if (!st) return;
   const cur = currentQuestion(), ph = S.room.phase;
   let html;
-  if (ph === 'summary') html = summaryHTML();
+  if (S.room.game === 'liar') html = liarStageHTML();
+  else if (ph === 'summary') html = summaryHTML();
   else if (ph === 'finished') html = finishedHTML();
   else if ((ph === 'question' || ph === 'results') && cur) html = questionHTML(cur);
   else html = lobbyHTML();
@@ -1171,7 +1241,7 @@ function lobbyHTML() {
   const started = S.questions.length > drafts.length;
   if (!drafts.length) {
     const samples = missingSamples().length;
-    return `
+    return `${gameSwitchHTML()}
     <div class="card setup">
       <div class="ic-badge">${ICON.list(22)}</div>
       <h2 class="display">${started ? '다음 판 질문을 추가해요' : '질문을 먼저 만들어요'}</h2>
@@ -1188,7 +1258,7 @@ function lobbyHTML() {
     </div>${people}`;
   }
   const no = (q) => S.questions.findIndex((x) => x.id === q.id) + 1;
-  return `
+  return `${gameSwitchHTML()}
     <div class="card ready">
       <div class="ready-h"><h2 class="display">질문 ${drafts.length}개</h2><span class="pill open">${ICON.check(14, 3)}준비 완료</span></div>
       <ol class="q-preview">${drafts.slice(0, 3).map((q) => `<li><b>Q${no(q)}</b><span>${esc(q.text)}${targetTag(q)}</span></li>`).join('')}</ol>
@@ -1538,7 +1608,142 @@ function nextDraft() {
   return drafts[0];
 }
 // 호스트 전용 진행 카드: 지금 할 일 하나만 큰 버튼으로 보여준다
+/* ================= Liar game ================= */
+// 대기실에서 호스트가 고르는 게임. 진행 중에는 바꿀 수 없다
+function gameSwitchHTML() {
+  const g = S.room.game || 'awards';
+  return `<div class="seg game-seg" role="radiogroup" aria-label="게임 선택">${[['awards', '어워즈'], ['liar', '라이어 게임']].map(([k, t]) =>
+    `<button type="button" role="radio" aria-checked="${g === k}" class="${g === k ? 'on' : ''}" data-action="set-game" data-g="${k}">${t}</button>`).join('')}</div>`;
+}
+const liarCatLabel = () => (LIAR_CATS.find(([k]) => k === liarCat) || LIAR_CATS[0])[1];
+function liarStageHTML() {
+  const lr = S.liar, mine = session.participant_id;
+  if (!lr) return liarLobbyHTML();
+  const byId = new Map(S.participants.map((p) => [p.id, p]));
+  const players = lr.players.map((id) => byId.get(id)).filter(Boolean); // 설명 순서대로, 나간 사람은 빼고
+  const label = { describe: ['open', '설명 중'], voting: ['open', '투표 중'], result: ['revealed', '결과'] }[lr.status];
+  const head = `<div class="q-head"><span class="q-label">${lr.round_no}번째 판 <em>· 주제 ${esc(lr.category)}</em></span><span class="pill ${label[0]}">${label[1]}</span></div>`;
+  if (lr.status === 'result') return head + liarResultHTML(lr, byId);
+  if (lr.status === 'describe') {
+    return head + liarCardHTML(lr) + `
+      <div class="sec"><span>설명 순서</span></div>
+      <ol class="order">${players.map((p, i) => `<li class="${p.id === mine ? 'me' : ''}"><b>${i + 1}</b>${emo(p.emoji)}<span>${esc(p.nickname)}</span></li>`).join('')}</ol>
+      <p class="liar-note">순서대로 한 마디씩 설명해요. 다 끝나면 호스트가 투표를 열어요</p>`;
+  }
+  // 투표: 라이어라고 생각하는 사람을 고른다 (본인 제외)
+  const n = players.length, pct = n ? Math.min(100, Math.round((lr.vote_count / n) * 100)) : 0;
+  const top = head + `<h2 class="q-text display">라이어는 누구일까요?</h2>
+    <div class="progress">
+      <div class="progress-top"><span>투표 현황</span><span>${lr.vote_count}/${n}명</span></div>
+      <div class="bar"><i style="width:${pct}%"></i></div>
+    </div>`;
+  if (!lr.players.includes(mine)) return top + liarCardHTML(lr);
+  const picks = players.filter((p) => p.id !== mine).map((p) => `
+      <button class="pick ${S.liarVote === p.id ? 'on' : ''}" data-action="liar-vote" data-id="${p.id}">
+        ${S.liarVote === p.id ? `<span class="check">${ICON.check(14, 3.2)}</span>` : ''}
+        <span class="pick-emoji">${emo(p.emoji)}</span>
+        <span class="pick-name">${esc(p.nickname)}</span>
+      </button>`).join('');
+  const hint = S.liarVote ? `${ICON.check(16, 3)} 투표 완료! 모두 투표하면 결과가 공개돼요` : '라이어라고 생각하는 사람을 골라주세요';
+  return top + `<div class="picks">${picks}</div><div class="vote-hint">${hint}</div>` + liarCardHTML(lr, true);
+}
+// 내 카드: 눌러야 보이고 잠시 뒤 저절로 가려진다. 라이어에게는 제시어가 전달되지 않는다
+function liarCardHTML(lr, mini) {
+  const c = S.card, cls = mini ? ' mini' : '';
+  if (!c || c.role === 'spectator') {
+    return `<div class="lcard${cls}"><span class="lc-k">이번 판은</span><b class="display">관전 중</b><small>판이 시작된 뒤에 들어왔어요. 다음 판부터 함께해요</small></div>`;
+  }
+  if (!cardOpen) {
+    return `<button class="lcard closed${cls}" data-action="card-toggle" aria-expanded="false"><span class="lc-k">내 카드</span><b class="display">눌러서 확인</b>${mini ? '' : '<small>옆 사람이 보지 않게 조심하세요</small>'}</button>`;
+  }
+  return c.role === 'liar'
+    ? `<button class="lcard open liar${cls}" data-action="card-toggle" aria-expanded="true"><span class="lc-k">당신은</span><b class="display">라이어</b><small>주제는 「${esc(lr.category)}」. 들키지 않게 아는 척 설명하세요</small><i>눌러서 가리기</i></button>`
+    : `<button class="lcard open${cls}" data-action="card-toggle" aria-expanded="true"><span class="lc-k">제시어</span><b class="display">${esc(c.word)}</b><small>라이어가 눈치채지 못하게 설명하세요</small><i>눌러서 가리기</i></button>`;
+}
+function liarResultHTML(lr, byId) {
+  const liar = byId.get(lr.liar_id), tally = lr.tally || {}, accused = lr.accused || [];
+  const rows = lr.players.map((id) => ({ p: byId.get(id), v: tally[id] || 0 })).filter((r) => r.p)
+    .sort((a, b) => b.v - a.v || a.p.nickname.localeCompare(b.p.nickname, 'ko'));
+  const top = rows[0]?.v || 0;
+  const why = lr.liar_caught ? '가장 많은 표를 받아 정체가 들통났어요'
+    : !accused.length ? '아무도 투표하지 않아 라이어가 무사히 빠져나갔어요'
+    : accused.length > 1 ? '표가 갈려서 라이어를 한 명으로 좁히지 못했어요'
+    : `${esc(byId.get(accused[0])?.nickname || '다른 사람')}님이 대신 지목됐어요`;
+  const role = S.card?.role;
+  const mine = role === 'liar' ? (lr.liar_caught ? '라이어였던 나는 졌어요' : '라이어였던 내가 이겼어요!')
+    : role === 'citizen' ? (lr.liar_caught ? '시민 팀 승리! 이겼어요' : '시민 팀 패배… 졌어요') : '';
+  return `
+    <div class="winner ${lr.liar_caught ? '' : 'liarwin'}">
+      <div class="lc-k">${lr.liar_caught ? '라이어 검거! 시민 승리' : '라이어 승리!'}</div>
+      <div class="w-emojis">${liar ? emo(liar.emoji) : ''}</div>
+      <div class="w-name display">${liar ? esc(liar.nickname) : '나간 참가자'}</div>
+      <div class="w-sub">라이어였어요 · 제시어 「${esc(lr.word || '')}」</div>
+    </div>
+    <p class="liar-note">${why}${mine ? `<br>${mine}` : ''}</p>
+    <div class="sec"><span>투표 결과</span></div>
+    <div class="rank">${rows.map((r, i) => `
+      <div class="rank-row">
+        <span class="n">${new Set(rows.slice(0, i + 1).map((x) => x.v)).size}</span>
+        <div class="who"><b>${emo(r.p.emoji)} ${esc(r.p.nickname)}${r.p.id === lr.liar_id ? '<span class="tag-liar">라이어</span>' : ''}</b><div class="bar"><i style="width:${top ? Math.round((r.v / top) * 100) : 0}%"></i></div></div>
+        <span class="v">${r.v}표</span>
+      </div>`).join('')}</div>`;
+}
+function liarLobbyHTML() {
+  const n = S.participants.length;
+  const chips = `<div class="people">${S.participants.map(personChip).join('')}</div>`;
+  if (!isHost()) {
+    return `
+    <div class="card center lobby">
+      <div class="big-emoji bob">${emo('😈')}</div>
+      <h2 class="display">라이어 게임</h2>
+      <p>한 명만 제시어를 모르는 라이어예요.<br>호스트가 시작하면 각자 카드가 나와요</p>
+    </div>
+    <div class="sec"><span>참가자 ${n}명</span></div>${chips}`;
+  }
+  return `${gameSwitchHTML()}
+    <div class="card setup">
+      <div class="ic-badge">${emo('😈')}</div>
+      <h2 class="display">라이어 게임</h2>
+      <p>모두 같은 제시어를 받고, 한 명만 모르는 라이어가 돼요. 돌아가며 말로 설명한 뒤 라이어를 투표로 찾아요. 단어와 라이어는 자동으로 뽑혀서 호스트도 함께 할 수 있어요.</p>
+      <label class="f">주제</label>
+      <div class="cat-chips" role="radiogroup" aria-label="주제">${LIAR_CATS.map(([k, t]) =>
+        `<button type="button" role="radio" aria-checked="${liarCat === k}" class="${liarCat === k ? 'on' : ''}" data-action="liar-cat" data-c="${k}">${t}</button>`).join('')}</div>
+    </div>
+    <div class="sec"><span>참가자 ${n}명</span><button class="btn ghost sm" data-action="share">${ICON.link(18)}친구 초대</button></div>${chips}`;
+}
+function liarHostCardHTML() {
+  const lr = S.liar, n = S.participants.length;
+  const side = (action, icon, text, attrs = '') => `<button class="hc-side" data-action="${action}"${attrs}>${icon}${text}</button>`;
+  const main = (o) => `<button class="hc-main${o.ghost ? ' ghost' : ''}"${o.action ? ` data-action="${o.action}"` : ' disabled'}>${o.icon || ''}<span class="t"><b>${o.title}</b><small>${o.sub}</small></span>${o.action && !o.ghost ? ICON.chevR(18, 2.4) : ''}</button>`;
+  const people = side('host-panel', ICON.list(20), '참가자', ' data-tab="p"');
+  const stop = side('liar-end', ICON.x(20, 2.2), '그만하기');
+  const start = (title) => (n >= 3
+    ? main({ action: 'liar-start', icon: ICON.play(22), title, sub: `주제 ${liarCatLabel()} · 라이어 1명` })
+    : main({ icon: ICON.play(22), title, sub: '3명 이상 모이면 시작할 수 있어요' }));
+  let top, body = '', row;
+  if (!lr) {
+    top = `<b>라이어 게임 · ${n}명 입장</b>`;
+    row = people + start('게임 시작');
+  } else if (lr.status === 'describe') {
+    top = `<span class="auto"><i></i>${lr.round_no}번째 판 · 설명 중</span>`;
+    body = `<p class="hc-text">돌아가며 설명이 끝나면 투표를 열어 주세요.</p>`;
+    row = stop + main({ action: 'liar-open-vote', icon: ICON.check(22, 2.4), title: '투표 시작', sub: '모두에게 투표 화면이 열려요' });
+  } else if (lr.status === 'voting') {
+    const need = lr.players.filter((id) => S.participants.some((p) => p.id === id)).length, left = Math.max(0, need - lr.vote_count);
+    top = `<span class="auto"><i></i>${lr.round_no}번째 판 · 투표 중</span>`;
+    body = `<p class="hc-text">${need}명이 모두 투표하면 결과가 자동으로 공개돼요.</p>`;
+    const pend = S.liarPending ? S.participants.filter((p) => S.liarPending.has(p.id)) : [];
+    if (pend.length) body += `<div class="hc-wait">아직 투표 안 함${pend.slice(0, 6).map((p) => `<span>${emo(p.emoji)} ${esc(p.nickname)}</span>`).join('')}${pend.length > 6 ? `<span>+${pend.length - 6}</span>` : ''}</div>`;
+    row = stop + main({ ghost: true, action: 'liar-close', icon: ICON.skip(22), title: '기다리지 않고 마감', sub: left ? `안 한 ${left}명은 빼고 결과를 공개해요` : '바로 결과를 공개해요' });
+  } else {
+    top = `<b>${lr.round_no}번째 판 종료</b>`;
+    row = side('liar-end', ICON.chevL(20, 2.2), '대기실') + start('한 판 더');
+  }
+  return `<div class="hostcard"><div class="hc-top">${top}<small>호스트 전용</small></div>${body}<div class="hc-row">${row}</div></div>`;
+}
+
 function hostCardHTML() {
+  if (S.room.game === 'liar') return liarHostCardHTML();
   const cur = currentQuestion(), ph = S.room.phase, n = S.participants.length;
   const qno = (q) => S.questions.findIndex((x) => x.id === q.id) + 1;
   const label = (q) => `Q${qno(q)}. ${esc(q.text)}`;
@@ -1722,9 +1927,9 @@ async function addQuestion(form) {
   } catch (err) { toast(errMsg(err)); }
   finally { btn.disabled = false; }
 }
-async function hostRpc(el, name) {
+async function hostRpc(el, name, args = {}) {
   el.disabled = true; // 다음 화면이 그려질 때까지 중복 탭 방지
-  try { await rpc(name, { p_token: session.token }); scheduleRefresh(); }
+  try { await rpc(name, { p_token: session.token, ...args }); scheduleRefresh(); }
   catch (err) { el.disabled = false; toast(errMsg(err)); scheduleRefresh(); }
 }
 function openMenu() { openSheet('menu', '<div id="menu-body"></div>'); renderMenu(); }
@@ -2059,6 +2264,37 @@ const actions = {
     catch (e) { if (e?.name !== 'AbortError') toast('공유하지 못했어요. 저장하기를 이용해 주세요'); }
   },
   'host-tab'(el) { hostTab = el.dataset.tab; pickMode = false; renderHostLists(); },
+  // ----- 라이어 게임 -----
+  'set-game'(el) { if (!el.classList.contains('on')) return hostRpc(el, 'host_set_game', { p_game: el.dataset.g }); },
+  'liar-cat'(el) { liarCat = el.dataset.c; lsSet(LS_LIAR_CAT, liarCat); render(); },
+  'liar-start'(el) { return hostRpc(el, 'liar_start', { p_category: liarCat === 'random' ? null : liarCat }); },
+  'liar-open-vote'(el) { return hostRpc(el, 'liar_open_vote'); },
+  'liar-close'(el) {
+    const lr = S.liar;
+    const left = lr ? lr.players.filter((id) => S.participants.some((p) => p.id === id)).length - lr.vote_count : 0;
+    if (left > 0 && !confirm(`아직 ${left}명이 투표하지 않았어요.\n기다리지 않고 결과를 공개할까요?`)) return;
+    return hostRpc(el, 'liar_close');
+  },
+  'liar-end'(el) {
+    if (S.liar && S.liar.status !== 'result' && !confirm('이번 판을 끝내고 대기실로 돌아갈까요?\n이번 판의 결과는 남지 않아요.')) return;
+    return hostRpc(el, 'liar_end');
+  },
+  async 'liar-vote'(el) {
+    const lr = S.liar;
+    if (!lr || lr.status !== 'voting') return;
+    const target = el.dataset.id, prev = S.liarVote;
+    if (prev === target) return;
+    S.liarVote = target;
+    renderStage(); vibrate(15);
+    try { await rpc('liar_vote', { p_token: session.token, p_target_id: target }); }
+    catch (err) { S.liarVote = prev; renderStage(); toast(errMsg(err)); scheduleRefresh(); }
+  },
+  'card-toggle'() { // 내 카드 펼치기·가리기. 펼친 채로 두면 8초 뒤 저절로 가린다
+    cardOpen = !cardOpen;
+    clearTimeout(cardTimer);
+    if (cardOpen) cardTimer = setTimeout(() => { cardOpen = false; renderStage(); }, 8000);
+    renderStage();
+  },
   'pick-start'() { pickMode = true; picked.clear(); renderHostLists(); },
   'pick-cancel'() { pickMode = false; renderHostLists(); },
   'pick-q'(el) {
