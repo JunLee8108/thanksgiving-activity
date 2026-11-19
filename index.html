@@ -5,11 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#FBF4E9">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>김김이홍남원 어워즈</title>
+<title>김김이홍남원배김 어워즈</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg fill='none'%3E%3Cpath fill='%239b9b9b' d='m11.79 29l.6-4.312h1.641L13.384 29h2.39l.601-4.312h1.64L17.37 29h1.537c.389 0 .945.218 1.08.745c.034.133-.082.247-.22.247h-11.5c-.138 0-.254-.113-.229-.249c.076-.413.361-.743 1.01-.743z'/%3E%3Cpath fill='%23f3ad61' d='M27.703 2h.594a1.703 1.703 0 0 1 .559 3.313a1.704 1.704 0 0 1-.56 3.312a1.703 1.703 0 0 1 .661 3.273a1.704 1.704 0 0 1-.262 3.227a1.704 1.704 0 0 1 .137 3.273a1.704 1.704 0 0 1-.535 3.32h.062a1.64 1.64 0 1 1 0 3.282h-4.14v-3.281h3.062v-16.5h.422z'/%3E%3Cpath fill='%23f70a8d' d='M2.031 14.594V18.5h3.266l2.937-9.281c.516-1.39 1.063-4.203-1.609-4.203c-2.281 0-1.776 2.817-1.234 4.203c.453 1.156.484 2.64-.766 2.797c-2.109.263-2.583 1.713-2.594 2.578'/%3E%3Cpath fill='%23f9c23c' d='M2.88 7.145L4.5 5.953v2.813l-1.622-1.22a.25.25 0 0 1 .002-.401'/%3E%3Cpath fill='%23ff6dc6' d='M4.297 6.078a.5.5 0 1 1 1 0V9.5a.5.5 0 0 1-1 0z'/%3E%3Cpath fill='%231c1c1c' d='M7.031 6.523a.5.5 0 1 1-1 0a.5.5 0 0 1 1 0'/%3E%3Cpath fill='%236d4534' d='M8.091 25C6.04 24.854 2 23.571 2 18.077c0-3.073 2.355-4.741 4.663-5.934c.693-.359.867-.565 1.02-.99C8.543 8.762 11.671 5 17.04 5c1.085 0 2.097.186 3.033.518c.333-1.232 1.713-2.174 2.385-2.61C23.595 2.172 25.608 2 28 2v17.266c0 .822-.08 1.77-.291 2.656c-.302 1.417-.91 2.598-2.134 2.962q-.35.114-.769.116z'/%3E%3Cpath fill='%23d3883e' d='M21.852 16.564a278 278 0 0 1 4.653 4.36c1.206 1.204.873 2.37.568 2.848C26.52 24.638 25.56 25 25.118 25h-8.921q-.365 0-.74-.015z'/%3E%3Cpath fill='%23a56953' d='M21.853 16.563a120 120 0 0 0-2.788-2.485C17.061 12.363 15.015 12 14.085 12C9.418 12 8 16.375 8 17.95c0 5.676 4.025 6.896 7.456 7.035a7 7 0 0 0 6.397-8.422'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&text=%EA%B9%80&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -92,7 +93,12 @@ label.f{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:16
 /* Home */
 .hero{text-align:center;padding:28px 0 22px}
 .hero-emoji{font-size:72px;line-height:1;display:inline-block;animation:bob 3s ease-in-out infinite}
-.hero h1{font-size:30px;margin:12px 0 6px}
+/* 제목: '배' 뒤에 교정부호(끼움표)로 '김'을 끼워 넣은 모양 */
+.hero h1{font-size:30px;margin:32px 0 6px;display:flex;flex-wrap:wrap;justify-content:center;align-items:baseline}
+.hero h1 .ins{position:relative;width:14px;align-self:stretch}
+.hero h1 .ins svg{position:absolute;left:-2px;top:-5px;color:var(--pumpkin-d)}
+.hero h1 .ins i{position:absolute;left:50%;bottom:100%;margin-bottom:3px;transform:translateX(-50%) rotate(-8deg);
+  font-family:'Nanum Pen Script',cursive;font-style:normal;font-size:34px;line-height:1;color:var(--pumpkin-d)}
 .hero p{margin:0;color:var(--ink2);line-height:1.55}
 .back-link{display:block;text-align:center;margin-top:16px;color:var(--ink2);font-size:14px;text-decoration:underline}
 
@@ -809,7 +815,7 @@ function renderHome(prefillCode, startTab) {
   <div class="wrap home">
     <div class="hero">
       <div class="hero-emoji">${emo('🦃')}</div>
-      <h1 class="display">김김이홍남원 어워즈</h1>
+      <h1 class="display" aria-label="김김이홍남원배김 어워즈"><span>김김이홍남원배</span><span class="ins"><svg aria-hidden="true" width="18" height="12" viewBox="0 0 18 12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l7 8 7-8"/></svg><i>김</i></span><span>어워즈</span></h1>
       <p>친구들끼리 실시간으로 투표하고<br>오늘의 주인공을 뽑아보세요</p>
     </div>
     <div class="card">
@@ -831,7 +837,7 @@ function renderHome(prefillCode, startTab) {
       </form>
       <form id="f-create" ${tab === 'create' ? '' : 'hidden'} autocomplete="off">
         <label class="f" for="c-name">방 이름</label>
-        <input id="c-name" maxlength="40" value="김김이홍남원 어워즈">
+        <input id="c-name" maxlength="40" value="김김이홍남원배김 어워즈">
         <label class="f" for="c-nick">내 닉네임</label>
         <input id="c-nick" maxlength="12" placeholder="친구들이 알아볼 이름" value="${nick}">
         <label class="f">성별</label>
@@ -1113,7 +1119,16 @@ function renderHeader() {
       <button class="icon-btn chat-btn" data-action="chat" aria-label="채팅${unread ? ` (안 읽은 메시지 ${unread}개)` : ''}">${ICON.chat(18)}${unread ? `<span class="badge">${unread > 99 ? '99+' : unread}</span>` : ''}</button>
       <button class="icon-btn" data-action="menu" aria-label="메뉴">${ICON.dots(18, 3)}</button>
     </div>`;
+  fitRoomName();
 }
+// 방 이름이 길면 글자를 조금 줄여서(19px → 최소 14px) 한 줄에 넣고, 그래도 넘치면 …으로 자른다
+function fitRoomName() {
+  const el = $('#hdr .room-name'); if (!el) return;
+  let px = 19;
+  el.style.fontSize = '';
+  while (el.scrollWidth > el.clientWidth && px > 14) { px -= 1; el.style.fontSize = px + 'px'; }
+}
+document.fonts?.ready.then(fitRoomName); // 글꼴이 늦게 로드되면 폭이 달라지므로 한 번 더
 function renderStage() {
   const st = $('#stage'); if (!st) return;
   const cur = currentQuestion(), ph = S.room.phase;
@@ -1461,7 +1476,7 @@ async function renderResultImage() {
       y += it.h;
     });
     y += 30;
-    text('김김이홍남원 어워즈', W / 2, y, F(400, 13, DISP), C.ink2, 'center');
+    text('김김이홍남원배김 어워즈', W / 2, y, F(400, 13, DISP), C.ink2, 'center');
     return y + 26;
   };
 
@@ -2020,7 +2035,7 @@ const actions = {
     catch { toast('복사에 실패했어요. 링크를 길게 눌러 복사해주세요'); }
   },
   async 'native-share'() {
-    try { await navigator.share({ title: S.room?.name || '김김이홍남원 어워즈', text: '투표하러 와!', url: shareUrl() }); } catch {}
+    try { await navigator.share({ title: S.room?.name || '김김이홍남원배김 어워즈', text: '투표하러 와!', url: shareUrl() }); } catch {}
   },
   'toggle-sound'() {
     soundOn = !soundOn; lsSet(LS_SOUND, soundOn ? 'on' : 'off');
@@ -2041,7 +2056,7 @@ const actions = {
   'export-image': openExportImage,
   'export-text': copyResultText,
   async 'export-share'() {
-    try { await navigator.share({ files: [exportFile], title: S.room?.name || '김김이홍남원 어워즈' }); }
+    try { await navigator.share({ files: [exportFile], title: S.room?.name || '김김이홍남원배김 어워즈' }); }
     catch (e) { if (e?.name !== 'AbortError') toast('공유하지 못했어요. 저장하기를 이용해 주세요'); }
   },
   'host-tab'(el) { hostTab = el.dataset.tab; pickMode = false; renderHostLists(); },
