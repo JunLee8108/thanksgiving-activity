@@ -1265,8 +1265,8 @@ function resultsHTML(q) {
       <div class="w-sub">${tie ? '공동 1위 · ' : ''}${top}표</div>
     </div>`;
   let rank = 0, prev = null;
-  const list = rows.map((r, i) => {
-    if (r.v !== prev) { rank = i + 1; prev = r.v; }
+  const list = rows.map((r) => {
+    if (r.v !== prev) { rank++; prev = r.v; } // 동점 다음 순위를 건너뛰지 않는다 (최종 결과의 메달과 같은 기준)
     return `
       <div class="rank-row">
         <span class="n">${rank}</span>
@@ -1277,16 +1277,17 @@ function resultsHTML(q) {
   return winner + `<div class="rank">${list}</div>`;
 }
 // 최종 결과 계산: 화면과 내보내기(이미지·텍스트)가 함께 쓴다.
-// 질문마다 순위별 묶음을 만든다. 표 수가 같으면 같은 순위 (예: 1위, 공동 2위 두 명, 4위)
+// 질문마다 순위별 묶음을 만든다. 표 수가 같으면 같은 순위이고, 그다음 순위를 건너뛰지 않는다
+// (예: 1위 한 명, 공동 2위 두 명, 그다음은 4위가 아니라 3위) — 메달이 비지 않도록
 const MEDAL = { 1: '🥇', 2: '🥈', 3: '🥉' };
 const moreOpen = new Set(); // '나머지 순위'를 펼쳐 둔 질문
 function summaryData() {
   return S.questions.filter((q) => q.status === 'revealed').map((q) => {
     const groups = [];
-    tallyFor(q.id).forEach((r, i) => {
+    tallyFor(q.id).forEach((r) => {
       const last = groups[groups.length - 1];
       if (last && last.votes === r.v) last.people.push(r.p);
-      else groups.push({ rank: i + 1, votes: r.v, people: [r.p] });
+      else groups.push({ rank: groups.length + 1, votes: r.v, people: [r.p] });
     });
     return {
       q, n: S.questions.findIndex((x) => x.id === q.id) + 1,
